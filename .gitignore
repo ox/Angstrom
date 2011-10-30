@@ -1,6 +1,8 @@
 .DS_Store
 logs
 logs/**/*
+log
+log/**/*
 run/*
-static
+
 
