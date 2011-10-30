@@ -5,7 +5,7 @@ class Connection
   
   attr_reader :app_id, :sub_addr, :pub_addr
   
-  def initialize(app_id, zmq_sub_pub_addr=["tcp://localhost", 9999, "tcp://localhost", 9998])
+  def initialize(app_id, zmq_sub_pub_addr=["tcp://127.0.0.1", 9999, "tcp://127.0.0.1", 9998])
     @app_id = app_id
     @sub_addr = zmq_sub_pub_addr[0..1].join(":")
     @pub_addr = zmq_sub_pub_addr[2..3].join(":")
@@ -15,13 +15,11 @@ class Connection
   
   def connect
     context = ZMQ::Context.new 1
-    @request_sock = context.socket ZMQ::PULL
-    @request_sock.setsockopt ZMQ::LINGER, 0
+    @request_sock = context.socket ZMQ::UPSTREAM
     @request_sock.connect @sub_addr
     
     @response_sock = context.socket ZMQ::PUB
     @response_sock.setsockopt ZMQ::IDENTITY, @app_id
-    @response_sock.setsockopt ZMQ::LINGER, 0
     @response_sock.connect @pub_addr
   end
   
