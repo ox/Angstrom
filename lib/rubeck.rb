@@ -1,5 +1,4 @@
 require 'json'
-require 'zmq'
 
 require './lib/rubeck/connection'
 require './lib/rubeck/fiber_pool'
