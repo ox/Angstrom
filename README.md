@@ -1,4 +1,4 @@
-# Rubeck #
+# Armstrong #
 An evented, fiber-based server for Ruby. This project is heavily based on [Brubeck](http://brubeck.io). The goal was to make it really easy to make an evented server that acted quick and scaled infinitely. This is accomplished by using [Mongrel2](http://mongrel2.org) and [ZeroMQ](http://zeromq.org).
 
 ## Mongrel2 and ZeroMQ ##
@@ -26,7 +26,7 @@ There's a sample `mongrel2.conf` and `config.sqlite` in the `demo` folder, feel 
 
 ## minimal example ##
 
-	require './lib/rubeck'
+	require './lib/armstrong'
 	
 	class HelloHandler < WebMessageHandler
 	  def process(req)
@@ -34,12 +34,12 @@ There's a sample `mongrel2.conf` and `config.sqlite` in the `demo` folder, feel 
 	  end
 	end
 	
-	app = Rubeck.new [[/\//, HelloHandler]]
+	app = Armstrong.new [[/\//, HelloHandler]]
 	app.run!
 
 Here, we set up a handler, and a route to match to it. When we get any request, it is matched against all of our defined routes and sent to the handler defined by the first one. When the handler calls `output()` the response is returned to the caller and everything returns back to the way it was.
 
-Now the fun part, when your mongrel2 server is up and running, run `ruby rubeck_test.rb` and then visit [localhost:6767](http://localhost:6767/) and relish in the 'Hello World'.
+Now the fun part, when your mongrel2 server is up and running, run `ruby armstrong_test.rb` and then visit [localhost:6767](http://localhost:6767/) and relish in the 'Hello World'.
 
 ## License ##
 GPLv3
