@@ -9,6 +9,7 @@ This is possible because of Mongrel2 and ZeroMQ. Mongrel2 acts as your server an
 ## setup ##
 #### ZeroMQ ####
 Go grab the zip from [zeromq/zeromq2-1](https://github.com/zeromq/zeromq2-1), unzip it, and in the directory run:
+	
 	./autogen.sh; ./configure; make; sudo make install
 
 #### ZMQ gem ####
