@@ -1,5 +1,5 @@
 require 'rubygems'
-require 'zmq'
+require 'ffi-rzmq'
 require 'json'
 
 class Connection
