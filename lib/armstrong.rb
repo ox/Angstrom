@@ -1,10 +1,11 @@
+require 'rubygems'
 require 'json'
 
-require './lib/amstrong/connection'
-require './lib/amstrong/fiber_pool'
-require './lib/amstrong/handler'
+require './lib/armstrong/connection'
+#require './lib/amstrong/fiber_pool'
+require './lib/armstrong/handler'
 
-class Amstrong
+class Armstrong
   attr_reader :conn, :routes, :pool
   
   def initialize(urls)
@@ -12,9 +13,7 @@ class Amstrong
     @conn.connect
     
     @routes = {}
-    urls.each { |u| add_route(u[0], u[1]) }
-    
-    @pool = FiberPool.new
+    urls.each { |u| add_route(u[0], u[1]) }    
   end
   
   def add_route(regex, handler)

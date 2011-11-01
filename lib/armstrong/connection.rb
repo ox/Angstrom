@@ -1,3 +1,4 @@
+require 'rubygems'
 require 'zmq'
 require 'json'
 
@@ -70,7 +71,7 @@ class Connection
   def parse(msg)
     uuid, id, path, header_size, headers, body_size, body = msg.match(/^(.{36}) (\d+) (.*?) (\d+):(.*?),(\d+):(.*?),$/).to_a[1..-1]
   
-    return {uuid: uuid, id: id, path: path, header_size: header_size, headers: JSON.parse(headers), body_size: body_size, body: body}
+    return {:uuid => uuid, :id => id, :path => path, :header_size => header_size, :headers => JSON.parse(headers), :body_size => body_size, :body => body}
   end
   
   # From WEBrick: thanks dawg.

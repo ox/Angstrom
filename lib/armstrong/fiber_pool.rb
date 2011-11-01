@@ -1,5 +1,3 @@
-require 'fiber'
-
 class FiberPool
   # Prepare a list of fibers that are able to run different blocks of code
   # every time. Once a fiber is done with its block, it attempts to fetch
