@@ -48,12 +48,12 @@ class Connection
   end
   
   def reply(request, message)
-    puts "request: " + request, "message: " + message
-    send(request[:uuid], [request[:id]], message)
+    #puts "request: " + request, "message: " + message
+    self.send(request[:uuid], [request[:id]], message)
   end
 
   def reply_http(req, body, code=200, headers={})
-    reply(req, http_response(body, code, headers))
+    self.reply(req, http_response(body, code, headers))
   end
   
   private
