@@ -1,6 +1,4 @@
-require 'rubygems'
 require 'ffi-rzmq'
-require 'json'
 
 class Connection
   
@@ -31,7 +29,9 @@ class Connection
   #raw recv
   def recv
     #puts "'recv'ing.."
-    return @request_sock.recv(0)
+    msg = ""
+    @request_sock.recv_string msg
+    return msg
   end
   
   #parse the request, this is the best way to get stuff back, as a Hash
@@ -43,21 +43,17 @@ class Connection
     header = "%s %d:%s" % [uuid, conn_id.join(' ').length, conn_id.join(' ')]
     string =  header + ', ' + msg 
     puts "'send'ing string: ", string
-    @response_sock.send(string, 0)
+    @response_sock.send_string string
     return
   end
   
   def reply(request, message)
-    #puts request
-    self.send(request[:uuid], [request[:id]], message)
+    puts "request: " + request, "message: " + message
+    send(request[:uuid], [request[:id]], message)
   end
-  
-  def reply_json(request, message)
-    self.reply(request, JSON.generate(message))
-  end
-  
+
   def reply_http(req, body, code=200, headers={})
-    self.reply(req, http_response(body, code, headers))
+    reply(req, http_response(body, code, headers))
   end
   
   private
@@ -71,7 +67,7 @@ class Connection
   def parse(msg)
     uuid, id, path, header_size, headers, body_size, body = msg.match(/^(.{36}) (\d+) (.*?) (\d+):(.*?),(\d+):(.*?),$/).to_a[1..-1]
   
-    return {:uuid => uuid, :id => id, :path => path, :header_size => header_size, :headers => JSON.parse(headers), :body_size => body_size, :body => body}
+    return {:uuid => uuid, :id => id, :path => path, :header_size => header_size, :headers => headers, :body_size => body_size, :body => body}
   end
   
   # From WEBrick: thanks dawg.

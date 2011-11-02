@@ -23,7 +23,7 @@ end
 def send(uuid, conn_id, msg)
   header = "%s %d:%s" % [uuid, conn_id.join(' ').length, conn_id.join(' ')]
   string =  header + ', ' + msg 
-  puts "'send'ing string: ", string
+  #puts "'send'ing string: ", string
   @res.send_string string, ZMQ::NOBLOCK
 end
 
@@ -91,10 +91,8 @@ msg = ""
 
 while true
   @req.recv_string msg
-  puts Benchmark.measure {
   data = parse(msg)
   reply_http(data, "hello world\0")
-  }
 end
 
 context.terminate
