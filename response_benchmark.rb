@@ -6,7 +6,7 @@ d = 0
 puts Benchmark.measure {
   100.times do
     begin
-      open("http://localhost:6000").read
+      open("http://localhost:6000/")
     rescue Exception => e
       puts e.message
       d += 1

@@ -1,5 +1,3 @@
-#we need Rubinius for this.
-
 require 'rubygems'
 require 'actor'
 
@@ -12,7 +10,6 @@ sender_id = "251449FF-14F2-442F-84C2-BE4B49720A75"
 
 AddRoute = Struct.new :route, :actor
 ShowRoutes = Struct.new :this
-Route = Struct.new :route, :process
 Request = Struct.new :data
 Connection = Struct.new :connection
 Reply = Struct.new :data, :message

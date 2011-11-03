@@ -1,7 +1,7 @@
+require 'rubygems'
 require 'ffi-rzmq'
 
 class Connection
-  
   attr_reader :app_id, :sub_addr, :pub_addr
   
   def initialize(app_id, zmq_sub_pub_addr=["tcp://127.0.0.1", 9999, "tcp://127.0.0.1", 9998])
@@ -42,7 +42,7 @@ class Connection
   def send(uuid, conn_id, msg)
     header = "%s %d:%s" % [uuid, conn_id.join(' ').length, conn_id.join(' ')]
     string =  header + ', ' + msg 
-    puts "'send'ing string: ", string
+    #puts "'send'ing string: ", string
     @response_sock.send_string string
     return
   end
