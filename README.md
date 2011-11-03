@@ -35,8 +35,7 @@ There's a sample `mongrel2.conf` and `config.sqlite` in the `demo` folder, feel 
 	require './lib/armstrong'
 	
 	HelloProc = Proc.new do
-	  data = Actor.receive
-	  Actor[:replier] << Reply.new(data, "Hello World\0")
+	  output "Hello World"
 	end
 
 	app = Armstrong.new [[/\//, HelloProc]]
