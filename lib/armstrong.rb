@@ -7,6 +7,21 @@ Request = Struct.new :data
 ConnectionInformation = Struct.new :connection
 Reply = Struct.new :data, :message
 
+class WebMessageHandler
+  def initialize(proc =nil, data=nil)
+    @proc = nil
+    @data = nil
+  end
+  
+  def get(path, &block)
+    @proc = block
+  end
+  
+  def output(value)
+    Actor[:replier] << Reply.new(@data, value)
+  end
+end
+
 def output(value)
   Actor[:replier] << Reply.new(Actor.receive,value)
 end
