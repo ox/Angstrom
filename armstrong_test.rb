@@ -1,8 +1,7 @@
 require './lib/armstrong'
 
 HelloProc = Proc.new do
-  data = Actor.receive
-  Actor[:replier] << Reply.new(data, "Hello World\0")
+  output "hello world"
 end
 
 app = Armstrong.new [[/\//, HelloProc]]
