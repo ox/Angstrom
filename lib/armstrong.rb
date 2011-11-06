@@ -41,41 +41,41 @@ module Aleph
       end
       
       def get(path, &block)
-        (@pairs ||= []) << AddRoute.new(path, block)
+        (@pairs ||= []) << AddRoute.new(compile(path), block)
       end
       
       private
-      def compile(path)
-        keys = []
-        if path.respond_to? :to_str
-          pattern = path.to_str.gsub(/[^\?\%\\\/\:\*\w]/) { |c| encoded(c) }
-          pattern.gsub!(/((:\w+)|\*)/) do |match|
-            if match == "*"
-              keys << 'splat'
-              "(.*?)"
-            else
-              keys << $2[1..-1]
-              "([^/?#]+)"
+        def compile(path)
+          keys = []
+          if path.respond_to? :to_str
+            pattern = path.to_str.gsub(/[^\?\%\\\/\:\*\w]/) { |c| encoded(c) }
+            pattern.gsub!(/((:\w+)|\*)/) do |match|
+              if match == "*"
+                keys << 'splat'
+                "(.*?)"
+              else
+                keys << $2[1..-1]
+                "([^/?#]+)"
+              end
             end
+            [/^#{pattern}$/, keys]
+          elsif path.respond_to?(:keys) && path.respond_to?(:match)
+            [path, path.keys]
+          elsif path.respond_to?(:names) && path.respond_to?(:match)
+            [path, path.names]
+          elsif path.respond_to? :match
+            [path, keys]
+          else
+            raise TypeError, path
           end
-          [/^#{pattern}$/, keys]
-        elsif path.respond_to?(:keys) && path.respond_to?(:match)
-          [path, path.keys]
-        elsif path.respond_to?(:names) && path.respond_to?(:match)
-          [path, path.names]
-        elsif path.respond_to? :match
-          [path, keys]
-        else
-          raise TypeError, path
         end
-      end
 
-      def encoded(char)
-        enc = URI.encode(char)
-        enc = "(?:#{Regexp.escape enc}|#{URI.encode char, /./})" if enc == char
-        enc = "(?:#{enc}|#{encoded('+')})" if char == " "
-        enc
-      end
+        def encoded(char)
+          enc = URI.encode(char)
+          enc = "(?:#{Regexp.escape enc}|#{URI.encode char, /./})" if enc == char
+          enc = "(?:#{enc}|#{encoded('+')})" if char == " "
+          enc
+        end
     end
   end
   
@@ -95,12 +95,11 @@ module Aleph
       
       Actor[:replier] << ConnectionInformation.new(@conn) if done
       
-      Lazy::demand(Lazy::Promise.new do |done|
+      Lazy::demand(Lazy::Promise.new do
         Actor[:request_handler] << AddRoutes.new(@pairs)
-        done = true
       end)
 
-      puts "","="*56,"Armstrong has launched on #{Time.now}","="*56, ""
+      #puts "","="*56,"Armstrong has launched on #{Time.now}","="*56, ""
       # main loop
       loop do
         req = @conn.receive

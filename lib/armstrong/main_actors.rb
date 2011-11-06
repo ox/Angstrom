@@ -6,6 +6,17 @@ module Aleph
   end
 end
 
+def process_route(route, pattern, keys, values = [])
+  return unless match = pattern.match(route)
+  values += match.captures.map { |v| URI.decode(v) if v }
+  params = {}
+  
+  if values.any?
+    keys.zip(values) { |k,v| (params[k] ||= '') << v if v }
+  end
+  return params
+end
+
 Aleph::Base.replier = Proc.new do   
   @name = "replier"
   puts "started (#{@name})"
@@ -53,11 +64,16 @@ Aleph::Base.request_handler = Proc.new do
       end
 
       f.when(Request) do |r|
+        failure = true
         routes.each do |route|
-          if route[0].match(r.data[:path]) != nil
+          if route[0][0].match(r.data[:path])
+            r.data[:params] = process_route(r.data[:path], route[0][0], route[0][1])
+            #puts r.data.inspect
             Actor.spawn_link(&route[1]) << r.data
+            failure = false
           end
         end
+        Actor[:replier] << Reply.new(r.data, "404") if failure
       end
 
       f.when(Actor::DeadActorError) do |exit|
