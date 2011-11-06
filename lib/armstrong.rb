@@ -1,125 +1,103 @@
 require 'actor'
+
 require './lib/armstrong/connection'
+require './lib/armstrong/data_structures'
+require './lib/armstrong/main_actors'
 
-AddRoute = Struct.new :route, :actor
-ShowRoutes = Struct.new :this
-Request = Struct.new :data
-ConnectionInformation = Struct.new :connection
-Reply = Struct.new :data, :message
+require 'lazy'
 
-class WebMessageHandler
-  def initialize(proc =nil, data=nil)
-    @proc = nil
-    @data = nil
-  end
-  
-  def get(path, &block)
-    @proc = block
-  end
-  
-  def output(value)
-    Actor[:replier] << Reply.new(@data, value)
-  end
+def get_request
+  return Actor.receive
 end
 
-def output(value)
+def reply(request, value)
+  Actor[:replier] << Reply.new(request, value)
+end
+
+def reply_string(value)
   Actor[:replier] << Reply.new(Actor.receive,value)
 end
   
-class Armstrong
-  def new_uuid
-    values = [
-      rand(0x0010000),
-      rand(0x0010000),
-      rand(0x0010000),
-      rand(0x0010000),
-      rand(0x0010000),
-      rand(0x1000000),
-      rand(0x1000000),
-    ]
-    #"251249FF-14F2-442F-84C2-BE4B49720A75"
-    "%04x%04x-%04x-%04x-%04x%06x%06x" % values
-  end
-  
-  def initialize(urls)
-    uuid = new_uuid
-    puts "using #{uuid}"
-    @conn = Connection.new uuid
-    @conn.connect
-  
-    @replier = Actor.spawn do      
-      Actor.register(:replier, Actor.current)
-      conn = nil
-      loop do
-        Actor.receive do |msg|
-          msg.when(ConnectionInformation) { |c| conn = c.connection }
-          msg.when(Reply) do |m|
-            begin
-              conn.reply_http(m.data, m.message, 200, {"Content-type" => "text/html"})
-            rescue Exception => e
-              puts "@replier: I fucked up with exception: #{e.message}"
-            end
-          end
-        end
+module Aleph
+  class Base
+    class << self
+      attr_accessor :conn, :routes, :pairs
+      
+      def new_uuid
+        values = [
+          rand(0x0010000),
+          rand(0x0010000),
+          rand(0x0010000),
+          rand(0x0010000),
+          rand(0x0010000),  
+          rand(0x1000000),
+          rand(0x1000000),
+        ]
+        "%04x%04x-%04x-%04x-%04x%06x%06x" % values
+      end
+      
+      def get(path, &block)
+        (@pairs ||= []) << AddRoute.new(path, block)
       end
     end
-    
-    @request_overlord = Actor.spawn do
-      Actor.register :overlord, Actor.current
-      Actor.trap_exit = true
+  end
+  
+  class Armstrong < Base  
+    def self.run!
+      uuid = new_uuid
+      puts "starting Armstrong as mongrel2 service #{uuid}"
+      @conn = Connection.new uuid
+      @conn.connect
+      
+      done = Lazy::demand(Lazy::Promise.new do |done|
+        Actor.spawn(&Aleph::Base.supervisor)
+        Actor.spawn(&Aleph::Base.replier)
+        Actor.spawn(&Aleph::Base.request_handler)
+        done = true
+      end)
+      
+      Actor[:replier] << ConnectionInformation.new(@conn) if done
+      
+      Lazy::demand(Lazy::Promise.new do |done|
+        Actor[:request_handler] << AddRoutes.new(@pairs)
+        done = true
+      end)
+
+      puts "","="*56,"Armstrong has launched on #{Time.now}","="*56, ""
+      # main loop
       loop do
-        Actor.receive do |msg|
-          msg.when(Actor::DeadActorError) do |exit|
-            puts "A request actor died parsing the input.\nactor: #{exit.actor.name}\nreason: #{exit.reason}"
-            exit = nil
-          end
+        req = @conn.receive
+        Actor[:request_handler] << Request.new(req) if !req.nil?
+      end
+    end
+  end
+  
+  # thank you sinatra!
+  # Sinatra delegation mixin. Mixing this module into an object causes all
+  # methods to be delegated to the Aleph::Armstrong class. Used primarily
+  # at the top-level.
+  module Delegator
+    def self.delegate(*methods)
+      methods.each do |method_name|
+        define_method(method_name) do |*args, &block|
+          return super(*args, &block) if respond_to? method_name
+          Delegator.target.send(method_name, *args, &block)
         end
+        private method_name
       end
     end
 
-    @replier << ConnectionInformation.new(@conn)
+    delegate :get
 
-    @supervisor = Actor.spawn do
-      supervisor = Actor.current
-      Actor.trap_exit = true
-      Actor.link(@replier)
-      routes = []
-      loop do
-        Actor.receive do |f|
-          f.when(AddRoute) do |r|
-            routes << [r.route, r.actor]
-          end
-          f.when(ShowRoutes) do |r|
-            routes.each {|s| puts s}
-          end
-          f.when(Request) do |r|
-            routes.each do |route|
-              if route[0].match(r.data[:path]) != nil
-                Actor.spawn_link(&route[1]) << r.data
-              end
-            end
-          end
-
-          f.when(Actor::DeadActorError) do |exit|
-            puts "#{exit.actor} died with reason: [#{exit.reason}]"
-            exit = nil
-          end
-        end
-      end
+    class << self
+      attr_accessor :target
     end
-    
-    @routes = {}
-    urls.each { |u| add_route(u[0], u[1]) }    
+
+    self.target = Armstrong
   end
   
-  def add_route(path, handler) 
-    @supervisor << AddRoute.new(path, handler)
-  end
-  
-  def run!    
-    while true
-      req = @conn.receive
-      @supervisor << Request.new(req)
-    end
-  end
+  at_exit { Armstrong.run! }
 end
+
+include Aleph::Delegator
+

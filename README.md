@@ -17,8 +17,9 @@ Go grab the zip from [zeromq/zeromq2-1](https://github.com/zeromq/zeromq2-1), un
 	
 	./autogen.sh; ./configure; make; sudo make install
 
-#### ZMQ gem ####
+#### ZMQ and other gems ####
 	gem install zmq
+	gem install lazy
 
 it should also install `ffi` and `ffi-rzmq` which are to dynamically load libs and call functions from them. Interesting stuff, but out of the scope of this measly README.
 
@@ -34,16 +35,15 @@ There's a sample `mongrel2.conf` and `config.sqlite` in the `demo` folder, feel 
 
 	require './lib/armstrong'
 	
-	HelloProc = Proc.new do
-	  output "Hello World"
+	get "/" do
+		output_string "hello world"
 	end
 
-	app = Armstrong.new [[/\//, HelloProc]]
-	app.run!
+Just like in Sinatra, we state the verb we want to use, the path, and give it a block with the relevant code to execute. So far only 'GET' requests are supported but more will come out in later builds. 
 
-Here, we set up a handler, and a route to match to it. When we get any request, it is matched against all of our defined routes and sent to the handler defined by the first one. Since our proc just responds "Hello World" to everything, it just blocks until it gets data and then sends it off to replier to send it back to mongrel2. You must send back data, since it has the reply address and id's to respond to.
+You can also call the `get_message` method which returns the request from the browser, and then reply to the request with `reply(request, message)`. `reply_string(message)` is a helper function that grabs the message and instantly replies to it with `message`.
 
-Now the fun part, when your mongrel2 server is up and running, run `ruby armstrong_test.rb` and then visit [localhost:6767](http://localhost:6767/) and relish in the 'Hello World'.
+Now you should run `ruby armstrong_test.rb` and then visit [localhost:6767](http://localhost:6767/) and relish in the 'Hello World'.
 
 ## benchmarking ##
 

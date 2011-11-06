@@ -1,8 +1,5 @@
 require './lib/armstrong'
 
-HelloProc = Proc.new do
-  output "hello world"
+get "/" do
+  output_string "hello world"
 end
-
-app = Armstrong.new [[/\//, HelloProc]]
-app.run!

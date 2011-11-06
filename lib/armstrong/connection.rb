@@ -9,8 +9,6 @@ class Connection
     @sub_addr = zmq_sub_pub_addr[0..1].join(":")
     @pub_addr = zmq_sub_pub_addr[2..3].join(":")
     
-    #puts "initialized with sub, pub addr: " + @sub_addr + ', ' + @pub_addr
-    
     @request_sock = @response_sock = nil
   end
   
@@ -42,13 +40,12 @@ class Connection
   def send(uuid, conn_id, msg)
     header = "%s %d:%s" % [uuid, conn_id.join(' ').length, conn_id.join(' ')]
     string =  header + ', ' + msg 
-    #puts "'send'ing string: ", string
+    #puts "\t\treplying to #{conn_id} with: ", string
     @response_sock.send_string string
     return
   end
   
   def reply(request, message)
-    #puts "request: " + request, "message: " + message
     self.send(request[:uuid], [request[:id]], message)
   end
 
@@ -65,6 +62,10 @@ class Connection
   end
   
   def parse(msg)
+    if(msg.empty?)
+      return nil
+    end
+    
     uuid, id, path, header_size, headers, body_size, body = msg.match(/^(.{36}) (\d+) (.*?) (\d+):(.*?),(\d+):(.*?),$/).to_a[1..-1]
   
     return {:uuid => uuid, :id => id, :path => path, :header_size => header_size, :headers => headers, :body_size => body_size, :body => body}
