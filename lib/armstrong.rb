@@ -1,11 +1,14 @@
 require 'actor'
-
-require './lib/armstrong/connection'
-require './lib/armstrong/data_structures'
-require './lib/armstrong/main_actors'
-
+require 'rubygems'
 require 'lazy'
 require 'open-uri'
+
+libdir = File.dirname(__FILE__)
+$LOAD_PATH.unshift(libdir) unless $LOAD_PATH.include?(libdir)
+
+require "armstrong/connection"
+require 'armstrong/data_structures'
+require 'armstrong/main_actors'
 
 def get_request
   return Actor.receive
