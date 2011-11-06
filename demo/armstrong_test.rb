@@ -1,10 +1,5 @@
 require '../lib/armstrong'
 
-class HelloHandler < WebMessageHandler
-  def process(req)
-    output("Hello world")
-  end
+get "/" do
+  reply_string "hello world"
 end
-
-app = Armstrong.new [[/\//, HelloHandler]]
-app.run!

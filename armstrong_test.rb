@@ -1,5 +1,5 @@
 require './lib/armstrong'
 
 get "/" do
-  output_string "hello world"
+  reply_string "hello world"
 end

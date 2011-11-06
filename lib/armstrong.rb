@@ -5,6 +5,7 @@ require './lib/armstrong/data_structures'
 require './lib/armstrong/main_actors'
 
 require 'lazy'
+require 'open-uri'
 
 def get_request
   return Actor.receive
@@ -38,6 +39,39 @@ module Aleph
       
       def get(path, &block)
         (@pairs ||= []) << AddRoute.new(path, block)
+      end
+      
+      private
+      def compile(path)
+        keys = []
+        if path.respond_to? :to_str
+          pattern = path.to_str.gsub(/[^\?\%\\\/\:\*\w]/) { |c| encoded(c) }
+          pattern.gsub!(/((:\w+)|\*)/) do |match|
+            if match == "*"
+              keys << 'splat'
+              "(.*?)"
+            else
+              keys << $2[1..-1]
+              "([^/?#]+)"
+            end
+          end
+          [/^#{pattern}$/, keys]
+        elsif path.respond_to?(:keys) && path.respond_to?(:match)
+          [path, path.keys]
+        elsif path.respond_to?(:names) && path.respond_to?(:match)
+          [path, path.names]
+        elsif path.respond_to? :match
+          [path, keys]
+        else
+          raise TypeError, path
+        end
+      end
+
+      def encoded(char)
+        enc = URI.encode(char)
+        enc = "(?:#{Regexp.escape enc}|#{URI.encode char, /./})" if enc == char
+        enc = "(?:#{enc}|#{encoded('+')})" if char == " "
+        enc
       end
     end
   end
