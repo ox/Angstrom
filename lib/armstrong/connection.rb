@@ -31,14 +31,13 @@ class Connection
   #parse the request, this is the best way to get stuff back, as a Hash
   def receive
     data = parse(recv)
-    puts "data: #{data} #{data.nil?}"
     return data
   end
   
   def send(uuid, conn_id, msg)
     header = "%s %d:%s" % [uuid, conn_id.join(' ').length, conn_id.join(' ')]
     string =  header + ', ' + msg 
-    puts "\t\treplying to #{conn_id} with: ", string
+    #puts "\t\treplying to #{conn_id} with: ", string
     @response_sock.send_string string + "\0"
     return
   end
