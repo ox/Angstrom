@@ -1,4 +1,3 @@
-require 'rubygems'
 require 'ffi-rzmq'
 
 class Connection
@@ -20,13 +19,10 @@ class Connection
     @response_sock = context.socket ZMQ::PUB
     @response_sock.setsockopt ZMQ::IDENTITY, @app_id
     @response_sock.connect @pub_addr
-    
-    #puts "made req_sock, res_sock: " + @request_sock.inspect + ", " + @response_sock.inspect
   end
   
   #raw recv
   def recv
-    #puts "'recv'ing.."
     msg = ""
     @request_sock.recv_string msg
     return msg

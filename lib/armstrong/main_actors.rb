@@ -65,7 +65,6 @@ Aleph::Base.request_handler = Proc.new do
       end
     end
   end
-  puts "request_handler: dead"
 end
 
 #if this dies, all hell will break loose
