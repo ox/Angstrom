@@ -45,6 +45,19 @@ You can also call the `get_message` method which returns the request from the br
 
 Now you should run `ruby armstrong_test.rb` and then visit [localhost:6767](http://localhost:6767/) and relish in the 'Hello World'.
 
+## more functionality ##
+
+commit e86c74aed added functionality for parameters in your path. These are simply demonstrated in the `demo/armstrong_test.rb` file. For instance, you can extract the id of a certain part of your path like so:
+
+	require 'armstrong'
+	
+	get "/:id" do
+		req = get_request
+		reply req, "id: #{req[:params]["id"]}"
+	end
+	
+The params are always going to be stored in the request, naturally.
+
 ## benchmarking ##
 
 	$ time curl localhost:6767/
