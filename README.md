@@ -16,9 +16,13 @@ This is possible because of Mongrel2 and ZeroMQ. Mongrel2 acts as your server an
 Go grab the zip from [zeromq/zeromq2-1](https://github.com/zeromq/zeromq2-1), unzip it, and in the directory run:
 	
 	./autogen.sh; ./configure; make; sudo make install
+	
+#### Armstrong as a gem ####
+
+	gem install armstrong
 
 #### ZMQ and other gems ####
-	gem install zmq
+	gem install ffi-rzmq
 	gem install lazy
 
 it should also install `ffi` and `ffi-rzmq` which are to dynamically load libs and call functions from them. Interesting stuff, but out of the scope of this measly README.

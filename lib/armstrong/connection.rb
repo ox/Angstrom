@@ -1,7 +1,7 @@
 require 'ffi-rzmq'
 
 class Connection
-  attr_reader :app_id, :sub_addr, :pub_addr
+  attr_reader :app_id, :sub_addr, :pub_addr, :request_sock, :response_sock
   
   def initialize(app_id, zmq_sub_pub_addr=["tcp://127.0.0.1", 9999, "tcp://127.0.0.1", 9998])
     @app_id = app_id
@@ -30,7 +30,7 @@ class Connection
   
   #parse the request, this is the best way to get stuff back, as a Hash
   def receive
-    data = parse(recv)
+    data = parse(self.recv)
     return data
   end
   
@@ -38,15 +38,15 @@ class Connection
     header = "%s %d:%s" % [uuid, conn_id.join(' ').length, conn_id.join(' ')]
     string =  header + ', ' + msg 
     #puts "\t\treplying to #{conn_id} with: ", string
-    @response_sock.send_string string + "\0"
-    return
+    @response_sock.send_string string, ZMQ::NOBLOCK
+    puts "send string"
   end
   
   def reply(request, message)
     self.send(request[:uuid], [request[:id]], message)
   end
 
-  def reply_http(req, body, code=200, headers={})
+  def reply_http(req, body, code=200, headers={"Content-type" => "text/html"})
     self.reply(req, http_response(body, code, headers))
   end
   

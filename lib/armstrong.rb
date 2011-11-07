@@ -14,12 +14,12 @@ def get_request
   return Actor.receive
 end
 
-def reply(request, value)
-  Actor[:replier] << Reply.new(request, value)
+def reply(request, body, code=200, headers={"Content-type" => "text/html"})
+  Actor[:replier] << Reply.new(request, body, code, headers)
 end
 
-def reply_string(value)
-  Actor[:replier] << Reply.new(Actor.receive,value)
+def reply_string(body, code=200, headers={"Content-type" => "text/html"})
+  Actor[:replier] << Reply.new(Actor.receive, body, code, headers)
 end
   
 module Aleph
@@ -86,23 +86,32 @@ module Aleph
       @conn = Connection.new uuid
       @conn.connect
       
-      done = Lazy::demand(Lazy::Promise.new do |done|
-        Actor.spawn(&Aleph::Base.supervisor)
+      #ensure that all actors are launched. Yea.
+      done = Lazy::demand(Lazy::promise do |done|
         Actor.spawn(&Aleph::Base.replier)
-        Actor.spawn(&Aleph::Base.request_handler)
-        done = true
+        done = Lazy::demand(Lazy::promise do |done|
+          Actor.spawn(&Aleph::Base.request_handler)
+          done = Lazy::demand(Lazy::promise do |done|
+            Actor.spawn(&Aleph::Base.supervisor)
+            done = true
+          end)
+        end)
       end)
       
       Actor[:replier] << ConnectionInformation.new(@conn) if done
       
-      Lazy::demand(Lazy::Promise.new do
+      done = Lazy::demand(Lazy::Promise.new do |done|
         Actor[:request_handler] << AddRoutes.new(@pairs)
+        done = true
       end)
 
-      #puts "","="*56,"Armstrong has launched on #{Time.now}","="*56, ""
+      puts "","="*56,"Armstrong has launched on #{Time.now}","="*56, "" if done
+      
+      puts "s:#{Actor[:supervisor]} h:#{Actor[:request_handler]} r: #{Actor[:replier]}"
       # main loop
       loop do
         req = @conn.receive
+        puts "s:#{Actor[:supervisor]} h:#{Actor[:request_handler]} r: #{Actor[:replier]}"
         Actor[:request_handler] << Request.new(req) if !req.nil?
       end
     end

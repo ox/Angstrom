@@ -31,7 +31,7 @@ Aleph::Base.replier = Proc.new do
       end
       msg.when(Reply) do |m|
         begin
-          conn.reply_http(m.data, m.message, 200, {"Content-type" => "text/html"})
+          conn.reply_http(m.data, m.body, m.code, m.headers)
         rescue Exception => e
           puts "Actor[:replier]: I messed up with exception: #{e.message}"
         end

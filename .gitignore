@@ -5,3 +5,5 @@ log
 log/**/*
 run/*
 .rbx*
+*.gem
+demo/run/mongrel2.pid
