@@ -14,7 +14,7 @@ def process_route(route, pattern, keys, values = [])
   if values.any?
     keys.zip(values) { |k,v| (params[k] ||= '') << v if v }
   end
-  return params
+  params
 end
 
 Aleph::Base.replier = Proc.new do   
@@ -73,12 +73,12 @@ Aleph::Base.request_handler = Proc.new do
             failure = false
           end
         end
-        Actor[:replier] << Reply.new(r.data, "404") if failure
+        Actor[:replier] << Reply.new(r.data, "404", 404, {'Content-type'=>'text/html'}) if failure
       end
 
-      f.when(Actor::DeadActorError) do |exit|
-        puts "#{exit.actor} died with reason: [#{exit.reason}]"
-      end
+      # f.when(Actor::DeadActorError) do |exit|
+      #         puts "#{exit.actor} died with reason: [#{exit.reason}]"
+      #       end
     end
   end
 end
