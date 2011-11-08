@@ -40,7 +40,7 @@ There's a sample `mongrel2.conf` and `config.sqlite` in the `demo` folder, feel 
 	require './lib/armstrong'
 	
 	get "/" do
-		output_string "hello world"
+		reply_string "hello world"
 	end
 
 Just like in Sinatra, we state the verb we want to use, the path, and give it a block with the relevant code to execute. So far only 'GET' requests are supported but more will come out in later builds. 
