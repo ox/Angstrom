@@ -105,13 +105,13 @@ module Aleph
         done = true
       end)
 
-      puts "","="*56,"Armstrong has launched on #{Time.now}","="*56, "" if done
+      if Actor[:supervisor] && Actor[:request_handler] && Actor[:replier] && done
+        puts "","="*56,"Armstrong has launched on #{Time.now}","="*56, ""
+      end
       
-      puts "s:#{Actor[:supervisor]} h:#{Actor[:request_handler]} r: #{Actor[:replier]}"
       # main loop
       loop do
         req = @conn.receive
-        puts "s:#{Actor[:supervisor]} h:#{Actor[:request_handler]} r: #{Actor[:replier]}"
         Actor[:request_handler] << Request.new(req) if !req.nil?
       end
     end
