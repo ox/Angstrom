@@ -25,13 +25,12 @@ class Connection
   def recv
     msg = ""
     @request_sock.recv_string msg
-    return msg
+    msg
   end
   
   #parse the request, this is the best way to get stuff back, as a Hash
   def receive
-    data = parse(self.recv)
-    return data
+    parse(self.recv)
   end
   
   def send(uuid, conn_id, msg)
@@ -39,7 +38,6 @@ class Connection
     string =  header + ', ' + msg 
     #puts "\t\treplying to #{conn_id} with: ", string
     @response_sock.send_string string, ZMQ::NOBLOCK
-    puts "send string"
   end
   
   def reply(request, message)
