@@ -1,5 +1,6 @@
 #!/usr/bin/env ruby
 
+require 'fileutils'
 include FileUtils
 
 # this is a cli tool to make getting running with armstrong easier.
@@ -16,6 +17,43 @@ def inform
   """
 end
 
+port = 6767
+
+mongrel2_conf = """
+armstrong_handler = Handler(
+    send_spec='tcp://127.0.0.1:9999',
+    send_ident='34f9ceee-cd52-4b7f-b197-88bf2f0ec378',
+    recv_spec='tcp://127.0.0.1:9998', 
+    recv_ident='')
+
+media_dir = Dir(
+    base='media/',
+    index_file='index.html',
+    default_ctype='text/plain')
+
+armstrong_host = Host(
+    name=\"localhost\", 
+    routes={
+        '/media/': media_dir,
+        '/': armstrong_handler})
+
+armstrong_serv = Server(
+    uuid=\"%s\",
+    access_log=\"/log/mongrel2.access.log\",
+    error_log=\"/log/mongrel2.error.log\",
+    chroot=\"./\",
+    default_host=\"localhost\",
+    name=\"armstrong test\",
+    pid_file=\"/run/mongrel2.pid\",
+    port=%i,
+    hosts = [armstrong_host]
+)
+
+settings = {\"zeromq.threads\": 2, \"limits.min_ping\": 15, \"limits.kill_limit\": 2}
+
+servers = [armstrong_serv]
+"""
+
 inform if ARGV.empty?
 
 case ARGV[0]
@@ -23,9 +61,10 @@ when 'create'
   inform if ARGV[1].nil?
   mkdir ARGV[1]
   cd ARGV[1]
-  cp File.join(File.dirname(File.expand_path(__FILE__)),"mongrel2.conf"), File.join(pwd, "mongrel2.conf")
-  cp File.join(File.dirname(File.expand_path(__FILE__)),"config.sqlite"), File.join(pwd, "config.sqlite")
-  File.new("#{ARGV[1]}.rb", 'w').puts "require 'rubygems'\nrequire 'armstrong'\n\n"
-  puts "Created app #{ARGV[1]}"
-  puts `ll`
+  %w[log run tmp].map(&method(:mkdir))
+  File.open("mongrel2.conf", 'w') {|file| file.puts(mongrel2_conf % [`m2sh uuid`.chomp, port]) }
+  puts "loading in the mongrel2.conf config"
+  puts `m2sh load -config mongrel2.conf -db config.sqlite`
+  File.open("#{ARGV[1]}.rb", 'w') {|file| file.puts "require 'rubygems'\nrequire 'armstrong'\n\n"}
+  puts "Created app #{ARGV[1]} that will run on port #{port}"
 end
