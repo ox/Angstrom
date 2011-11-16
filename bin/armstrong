@@ -1,0 +1,31 @@
+#!/usr/bin/env ruby
+
+include FileUtils
+
+# this is a cli tool to make getting running with armstrong easier.
+def inform
+  puts """
+    Armstrong is an asynchronous ruby web framework that's fronted by mongrel2
+    and makes use of Actors in order to handle requests. It is preferred to use
+    rubinius2.0.0dev in order to take advantage of true concurrency in Ruby.
+    
+    usage: armstrong <command>
+    
+    commands:
+      create <name>     Creates an armstrong app with a sample mongrel2.conf and config.sqlite
+  """
+end
+
+inform if ARGV.empty?
+
+case ARGV[0]
+when 'create'
+  inform if ARGV[1].nil?
+  mkdir ARGV[1]
+  cd ARGV[1]
+  cp File.join(File.dirname(File.expand_path(__FILE__)),"mongrel2.conf"), File.join(pwd, "mongrel2.conf")
+  cp File.join(File.dirname(File.expand_path(__FILE__)),"config.sqlite"), File.join(pwd, "config.sqlite")
+  File.new("#{ARGV[1]}.rb", 'w').puts "require 'rubygems'\nrequire 'armstrong'\n\n"
+  puts "Created app #{ARGV[1]}"
+  puts `ll`
+end
