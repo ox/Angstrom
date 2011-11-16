@@ -13,11 +13,26 @@ def inform
     usage: armstrong <command>
     
     commands:
-      create <name>     Creates an armstrong app with a sample mongrel2.conf and config.sqlite
+      create <name> [port]      Creates an armstrong app with a sample 
+                                mongrel2.conf and config.sqlite running on
+                                [port] or the default 6767.
+                                
+      start [host] [db.sqlite]  Starts a mongrel2 server in this directory
+                                and then runs the app called by the current 
+                                directorys name. This is equivalent to:
+                                  $m2sh start -host localhost -db config.sqlite >> /dev/null &
+                                  $ruby app.rb
+                                  
+      stop [host]               Kills the default running mongrel2 
+                                server or [host]. This is like:
+                                  $m2sh stop -host localhost
+                                  
+    short commands:
+      c = create
+      s = start
+      t = stop
   """
 end
-
-port = 6767
 
 mongrel2_conf = """
 armstrong_handler = Handler(
@@ -57,8 +72,9 @@ servers = [armstrong_serv]
 inform if ARGV.empty?
 
 case ARGV[0]
-when 'create'
+when 'create', 'c'
   inform if ARGV[1].nil?
+  port = (ARGV[2].nil? ? 6767 : ARGV[2])
   mkdir ARGV[1]
   cd ARGV[1]
   %w[log run tmp].map(&method(:mkdir))
@@ -67,4 +83,26 @@ when 'create'
   puts `m2sh load -config mongrel2.conf -db config.sqlite`
   File.open("#{ARGV[1]}.rb", 'w') {|file| file.puts "require 'rubygems'\nrequire 'armstrong'\n\n"}
   puts "Created app #{ARGV[1]} that will run on port #{port}"
+  
+when 'start', 's'
+  host = (ARGV[1].nil? ? 'localhost' : ARGV[1])
+  db = (ARGV[2].nil? ? 'config.sqlite' : ARGV[2])
+  
+  output = `m2sh start -host #{host} -config #{db} > /dev/null &`
+  if output.match /Aborting/
+    puts "Error starting up mongrel2.\n\nTrace:\n#{output}"
+    break
+  end
+  puts "Started #{host} using the #{db} db" 
+  
+  file = Dir.pwd.split('/').last
+  puts "now running #{file}.rb"
+  puts `ruby #{file}.rb`
+  
+when 'stop', 't'
+  host = (ARGV[1].nil? ? 'localhost' : ARGV[1])
+  puts `m2sh stop -host #{host}`
+  puts "Stopped #{host}, I think"
+else
+  inform
 end
