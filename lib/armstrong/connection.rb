@@ -44,7 +44,7 @@ class Connection
     self.send(request[:uuid], [request[:id]], message)
   end
 
-  def reply_http(req, body, code=200, headers={"Content-type" => "text/html"})
+  def reply_http(req, code=200, headers={"Content-type" => "text/html"}, body="")
     self.reply(req, http_response(body, code, headers))
   end
   
@@ -52,7 +52,7 @@ class Connection
   def http_response(body, code, headers)
     headers['Content-Length'] = body.size
     headers_s = headers.map{|k, v| "%s: %s" % [k,v]}.join("\r\n")
-
+    
     "HTTP/1.1 #{code} #{StatusMessage[code.to_i]}\r\n#{headers_s}\r\n\r\n#{body}"
   end
   

@@ -2,6 +2,7 @@ require 'actor'
 require 'rubygems'
 require 'lazy'
 require 'open-uri'
+require 'json'
 
 libdir = File.dirname(__FILE__)
 $LOAD_PATH.unshift(libdir) unless $LOAD_PATH.include?(libdir)
@@ -9,23 +10,11 @@ $LOAD_PATH.unshift(libdir) unless $LOAD_PATH.include?(libdir)
 require "armstrong/connection"
 require 'armstrong/data_structures'
 require 'armstrong/main_actors'
-
-def get_request
-  return Actor.receive
-end
-
-def reply(request, body, code=200, headers={"Content-type" => "text/html"})
-  Actor[:replier] << Reply.new(request, body, code, headers)
-end
-
-def reply_string(body, code=200, headers={"Content-type" => "text/html"})
-  Actor[:replier] << Reply.new(Actor.receive, body, code, headers)
-end
   
 module Aleph
   class Base
     class << self
-      attr_accessor :conn, :routes, :pairs
+      attr_accessor :conn, :routes
       
       def new_uuid
         values = [
@@ -40,8 +29,16 @@ module Aleph
         "%04x%04x-%04x-%04x-%04x%06x%06x" % values
       end
       
-      def get(path, &block)
-        (@pairs ||= []) << AddRoute.new(compile(path), block)
+      def get(path, &block) route "GET", path, &block end
+      def put(path, &block)  route "PUT",  path, &block end
+      def post(path, &block) route "POST", path, &block end
+      def head(path, &block) route "HEAD", path, &block end
+      def delete(path, &block) route "DELETE", path, &block end
+      def patch(path, &block) route "PATCH", path, &block end
+      
+      def route(verb, path, &block)
+        @routes ||= {}
+        (@routes[verb] ||= []) << AddRoute.new(compile(path), block)
       end
       
       private
@@ -88,31 +85,31 @@ module Aleph
       
       #ensure that all actors are launched. Yea.
       done = Lazy::demand(Lazy::promise do |done|
-        Actor.spawn(&Aleph::Base.replier)
+        Actor.spawn(&Aleph::Base.replier_proc)
         done = Lazy::demand(Lazy::promise do |done|
-          Actor.spawn(&Aleph::Base.request_handler)
+          Actor.spawn(&Aleph::Base.request_handler_proc)
           done = Lazy::demand(Lazy::promise do |done|
-            Actor.spawn(&Aleph::Base.supervisor)
+            Actor.spawn(&Aleph::Base.supervisor_proc)
             done = true
           end)
         end)
       end)
       
-      Actor[:replier] << ConnectionInformation.new(@conn) if done
+      Aleph::Base.replier << ConnectionInformation.new(@conn) if done
       
       done = Lazy::demand(Lazy::Promise.new do |done|
-        Actor[:request_handler] << AddRoutes.new(@pairs)
+        Aleph::Base.request_handler << AddRoutes.new(@routes)
         done = true
       end)
 
-      if Actor[:supervisor] && Actor[:request_handler] && Actor[:replier] && done
+      if Aleph::Base.supervisor && Aleph::Base.request_handler && Aleph::Base.replier && done
         puts "","="*56,"Armstrong has launched on #{Time.now}","="*56, ""
       end
       
       # main loop
       loop do
         req = @conn.receive
-        Actor[:request_handler] << Request.new(req) if !req.nil?
+        Aleph::Base.request_handler << Request.new(req) if !req.nil?
       end
     end
   end
@@ -132,7 +129,7 @@ module Aleph
       end
     end
 
-    delegate :get
+    delegate :get, :post, :put, :patch, :delete, :head
 
     class << self
       attr_accessor :target
