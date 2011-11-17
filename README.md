@@ -40,12 +40,10 @@ There's a sample `mongrel2.conf` and `config.sqlite` in the `demo` folder, feel 
 	require './lib/armstrong'
 	
 	get "/" do
-		reply_string "hello world"
+		"hello world"
 	end
 
 Just like in Sinatra, we state the verb we want to use, the path, and give it a block with the relevant code to execute. So far only 'GET' requests are supported but more will come out in later builds. 
-
-You can also call the `get_message` method which returns the request from the browser, and then reply to the request with `reply(request, message)`. `reply_string(message)` is a helper function that grabs the message and instantly replies to it with `message`.
 
 Now you should run `ruby armstrong_test.rb` and then visit [localhost:6767](http://localhost:6767/) and relish in the 'Hello World'.
 
@@ -55,12 +53,11 @@ commit e86c74aed added functionality for parameters in your path. These are simp
 
 	require 'armstrong'
 	
-	get "/:id" do
-		req = get_request
-		reply req, "id: #{req[:params]["id"]}"
+	get "/:id" do |env|
+		"id: #{env[:params]["id"]}"
 	end
 	
-The params are always going to be stored in the request, naturally.
+The params are always going to be stored in `env`, naturally.
 
 ## benchmarking ##
 

@@ -1,15 +1,13 @@
 require '../lib/armstrong'
 
 get "/" do
-  reply_string "hello world"
+  "hello world"
 end
 
-get "/:id" do
-  req = get_request
-  reply req, "id: #{req[:params]["id"]}"
+get "/:id" do |env|
+  "id: #{env[:params]["id"]}"
 end
 
-get "/:id/do" do
-  req = get_request
-  reply req, "do: #{req[:params]["id"]}"
+get "/:id/do" do |env|
+  "do: #{env[:params]["id"]}"
 end

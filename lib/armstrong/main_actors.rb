@@ -2,6 +2,7 @@ module Aleph
   class Base
     class << self
       attr_accessor :replier, :request_handler, :supervisor
+      attr_accessor :replier_proc, :request_handler_proc, :supervisor_proc, :container_proc
     end
   end
 end
@@ -17,21 +18,21 @@ def process_route(route, pattern, keys, values = [])
   params
 end
 
-Aleph::Base.replier = Proc.new do   
+Aleph::Base.replier_proc = Proc.new do   
   @name = "replier"
   puts "started (#{@name})"
   Actor.register(:replier, Actor.current)
+  Aleph::Base.replier = Actor.current
   conn = nil
   
   loop do
     Actor.receive do |msg|
       msg.when(ConnectionInformation) do |c|
-        #puts "replier: got connection information #{c.inspect}"
         conn = c.connection
       end
       msg.when(Reply) do |m|
         begin
-          conn.reply_http(m.data, m.body, m.code, m.headers)
+          conn.reply_http(m.env, m.code, m.headers, m.body)
         rescue Exception => e
           puts "Actor[:replier]: I messed up with exception: #{e.message}"
         end
@@ -40,40 +41,49 @@ Aleph::Base.replier = Proc.new do
   end
 end
 
-Aleph::Base.request_handler = Proc.new do
+# this nifty mess helps us just to use the output of the Procs that handle
+# the request instead of making the user manually catch messages and send 
+# them out to the replier. 
+
+Aleph::Base.container_proc = Proc.new do
+  data = Actor.receive
+  env, proccess = data.env, data.proccess
+  response = proccess.call(env)
+  if response.is_a? Array
+    #just like Rack: env, code, headers, body. HINT HINT
+    Aleph::Base.replier << Reply.new(env, response[0], response[1], response[2])
+  else
+    Aleph::Base.replier << Reply.new(env, 200, {"Content-Type" => "text/html"}, response)
+  end
+end
+
+Aleph::Base.request_handler_proc = Proc.new do
   @name = "request_handler"
   puts "started (#{@name})"
   Actor.register(:request_handler, Actor.current)
+  Aleph::Base.request_handler = Actor.current
   Actor.trap_exit = true
   
-  routes = []
+  routes = {}
   loop do
     Actor.receive do |f|
-      f.when(AddRoute) do |r|
-        routes << [r.route, r.method]
-      end
-      
       f.when(AddRoutes) do |r|
-        r.routes.each do |k|
-          routes << [k.route, k.method]
-        end
-      end
-
-      f.when(ShowRoutes) do |r|
-        routes.each {|s| puts s}
+        routes = r.routes
       end
 
       f.when(Request) do |r|
         failure = true
-        routes.each do |route|
-          if route[0][0].match(r.data[:path])
-            r.data[:params] = process_route(r.data[:path], route[0][0], route[0][1])
-            #puts r.data.inspect
-            Actor.spawn_link(&route[1]) << r.data
+        r.env[:headers] = JSON.parse(r.env[:headers])
+        verb = r.env[:headers]["METHOD"]
+        routes[verb].each do |route|
+          if route.route[0].match(r.env[:path])
+            r.env[:params] = process_route(r.env[:path], route.route[0], route.route[1])
+            Actor.spawn(&Aleph::Base.container_proc) << MessageAndProc.new(r.env, route.method)
             failure = false
+            break
           end
         end
-        Actor[:replier] << Reply.new(r.data, "404", 404, {'Content-type'=>'text/html'}) if failure
+        Aleph::Base.replier << Reply.new(r.env, 404, {'Content-type'=>'text/html'}, "<h1>404</h1>") if failure
       end
 
       # f.when(Actor::DeadActorError) do |exit|
@@ -84,9 +94,10 @@ Aleph::Base.request_handler = Proc.new do
 end
 
 #if this dies, all hell will break loose
-Aleph::Base.supervisor = Proc.new do
+Aleph::Base.supervisor_proc = Proc.new do
   puts "started (supervisor)"
   Actor.register(:supervisor, Actor.current)
+  Aleph::Base.supervisor = Actor.current
   Actor.trap_exit = true
   
   Actor.link(Actor[:replier])
@@ -98,9 +109,9 @@ Aleph::Base.supervisor = Proc.new do
         "#{exit.actor.name} died with reason: #{exit.reason}"
         case exit.actor.name
         when "request_handler"
-          Actor.spawn_link(&@request_handler)
+          Actor.spawn_link(&@request_handler_proc)
         when "replier"
-          Actor.spawn_link(&@replier)          
+          Actor.spawn_link(&@replier_proc)          
         end
       end
     end
