@@ -1,4 +1,4 @@
-require '../lib/armstrong'
+require File.join(File.dirname(__FILE__), "..", "lib/armstrong")
 
 get "/" do
   "hello world"

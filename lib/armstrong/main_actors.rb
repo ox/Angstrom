@@ -53,7 +53,7 @@ Aleph::Base.container_proc = Proc.new do
     #just like Rack: env, code, headers, body. HINT HINT
     Aleph::Base.replier << Reply.new(env, response[0], response[1], response[2])
   else
-    Aleph::Base.replier << Reply.new(env, 200, {"Content-Type" => "text/html"}, response)
+    Aleph::Base.replier << Reply.new(env, 200, {"Content-Type", "text/html;charset=utf-8", "Connection", "keep-alive", "Server", "Armstrong", "X-Frame-Options", "sameorigin", "X-XSS_Protection", "1; mode=block"}, response)
   end
 end
 
