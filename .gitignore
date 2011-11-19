@@ -9,5 +9,4 @@ run/*
 demo/run/mongrel2.pid
 response_benchmark.rb
 *_test.rb
-
-
+*.sqlite
