@@ -10,3 +10,4 @@ demo/run/mongrel2.pid
 *.sqlite
 *_test.rb
 *_benchmark.rb
+
