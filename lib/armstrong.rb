@@ -1,8 +1,6 @@
 require 'actor'
 require 'rubygems'
 require 'lazy'
-require 'open-uri'
-require 'json'
 
 libdir = File.dirname(__FILE__)
 $LOAD_PATH.unshift(libdir) unless $LOAD_PATH.include?(libdir)
@@ -16,6 +14,7 @@ module Aleph
     class << self
       attr_accessor :conn, :routes
       
+      # uuid generator. There's a pretty low chance of collision.
       def new_uuid
         values = [
           rand(0x0010000),
@@ -76,7 +75,16 @@ module Aleph
     end
   end
   
-  class Armstrong < Base  
+  class Armstrong < Base
+    
+    # the kicker. It all gets launched from here.
+    # this function makes a new connection object to handle the communication,
+    # promises to start the replier, request handler, and their supervisor,
+    # gives the replier the connection information, tells the request_handler
+    # what routes it should be able to match, then checks that all of the services
+    # are running correctly, gives us a launch time, then jumps into our main loop
+    # that waits for an incoming message, parses it, and sends it off to be
+    # operated on by the request handler. Boom.
     def self.run!
       uuid = new_uuid
       puts "starting Armstrong as mongrel2 service #{uuid}"
@@ -138,6 +146,7 @@ module Aleph
     self.target = Armstrong
   end
   
+  # Sinatras secret sauce.
   at_exit { Armstrong.run! }
 end
 

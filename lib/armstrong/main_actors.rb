@@ -7,6 +7,16 @@ module Aleph
   end
 end
 
+# take the route and pattern and keys and this function will match the keyworded params in
+# the url with the pattern. Example:
+# 
+#   url: /user/2/view/345
+#   pattern: /user/:id/view/:comment
+#
+# returns:
+#
+#   params = {id: 2, comment: 345}
+#
 def process_route(route, pattern, keys, values = [])
   return unless match = pattern.match(route)
   values += match.captures.map { |v| URI.decode(v) if v }
@@ -32,7 +42,7 @@ Aleph::Base.replier_proc = Proc.new do
       end
       msg.when(Reply) do |m|
         begin
-          conn.reply_http(m.env, m.code, m.headers, m.body)
+          conn.reply_http(m.env, m.body, m.code, m.headers)
         rescue Exception => e
           puts "Actor[:replier]: I messed up with exception: #{e.message}"
         end
@@ -44,7 +54,6 @@ end
 # this nifty mess helps us just to use the output of the Procs that handle
 # the request instead of making the user manually catch messages and send 
 # them out to the replier. 
-
 Aleph::Base.container_proc = Proc.new do
   data = Actor.receive
   env, proccess = data.env, data.proccess
@@ -73,7 +82,6 @@ Aleph::Base.request_handler_proc = Proc.new do
 
       f.when(Request) do |r|
         failure = true
-        r.env[:headers] = JSON.parse(r.env[:headers])
         verb = r.env[:headers]["METHOD"]
         routes[verb].each do |route|
           if route.route[0].match(r.env[:path])

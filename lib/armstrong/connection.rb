@@ -1,7 +1,9 @@
+require 'ffi'
 require 'ffi-rzmq'
+require 'json'
 
 class Connection
-  attr_reader :app_id, :sub_addr, :pub_addr, :request_sock, :response_sock
+  attr_reader :app_id, :sub_addr, :pub_addr, :request_sock, :response_sock, :context
   
   def initialize(app_id, zmq_sub_pub_addr=["tcp://127.0.0.1", 9999, "tcp://127.0.0.1", 9998])
     @app_id = app_id
@@ -12,27 +14,29 @@ class Connection
   end
   
   def connect
-    context = ZMQ::Context.new 1
-    @request_sock = context.socket ZMQ::PULL
+    @context = ZMQ::Context.new 1
+    @request_sock = @context.socket ZMQ::PULL
     @request_sock.connect @sub_addr
     
-    @response_sock = context.socket ZMQ::PUB
+    @response_sock = @context.socket ZMQ::PUB
     @response_sock.setsockopt ZMQ::IDENTITY, @app_id
     @response_sock.connect @pub_addr
   end
   
-  #raw recv
+  #raw recv, unparsed message
   def recv
     msg = ""
-    @request_sock.recv_string msg
+    rc = @request_sock.recv_string(msg)
+    puts "errno [#{ZMQ::Util.errno}] with description [#{ZMQ::Util.error_string}]" unless ZMQ::Util.resultcode_ok?(rc)
     msg
   end
   
   #parse the request, this is the best way to get stuff back, as a Hash
   def receive
-    parse(self.recv)
+    parse(recv)
   end
   
+  # sends the message off, formatted for Mongrel2 to understand
   def send(uuid, conn_id, msg)
     header = "%s %d:%s" % [uuid, conn_id.join(' ').length, conn_id.join(' ')]
     string =  header + ', ' + msg 
@@ -40,12 +44,14 @@ class Connection
     @response_sock.send_string string, ZMQ::NOBLOCK
   end
   
-  def reply(request, message)
-    self.send(request[:uuid], [request[:id]], message)
+  # reply to an env with `message` string
+  def reply(env, message)
+    self.send(env[:sender], [env[:conn_id]], message)
   end
 
-  def reply_http(req, code=200, headers={"Content-type" => "text/html"}, body="")
-    self.reply(req, http_response(body, code, headers))
+  # reply to a req with a valid http header
+  def reply_http(env, body, code=200, headers={"Content-type" => "text/html"})
+    self.reply(env, http_response(body, code, headers))
   end
   
   private
@@ -56,14 +62,25 @@ class Connection
     "HTTP/1.1 #{code} #{StatusMessage[code.to_i]}\r\n#{headers_s}\r\n\r\n#{body}"
   end
   
+  def parse_netstring(ns)
+    len, rest = ns.split(':', 2)
+    len = len.to_i
+    raise "Netstring did not end in ','" unless rest[len].chr == ','
+    [ rest[0...len], rest[(len+1)..-1] ]
+  end
+  
   def parse(msg)
-    if(msg.empty?)
+    if msg.nil? || msg.empty?
       return nil
     end
     
-    uuid, id, path, header_size, headers, body_size, body = msg.match(/^(.{36}) (\d+) (.*?) (\d+):(.*?),(\d+):(.*?),$/).to_a[1..-1]
-  
-    return {:uuid => uuid, :id => id, :path => path, :header_size => header_size, :headers => headers, :body_size => body_size, :body => body}
+    env = {}
+    env[:sender], env[:conn_id], env[:path], rest = msg.split(' ', 4)
+    env[:headers], head_rest = parse_netstring(rest)
+    env[:body], _ = parse_netstring(head_rest)
+
+    env[:headers] = JSON.parse(env[:headers])
+    return env
   end
   
   # From WEBrick: thanks dawg.
