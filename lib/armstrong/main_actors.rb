@@ -33,6 +33,7 @@ Aleph::Base.replier_proc = Proc.new do
   puts "started (#{@name})"
   Actor.register(:replier, Actor.current)
   Aleph::Base.replier = Actor.current
+  Actor.trap_exit = true
   conn = nil
   
   loop do
@@ -94,9 +95,9 @@ Aleph::Base.request_handler_proc = Proc.new do
         Aleph::Base.replier << Reply.new(r.env, 404, {'Content-type'=>'text/html'}, "<h1>404</h1>") if failure
       end
 
-      # f.when(Actor::DeadActorError) do |exit|
-      #         puts "#{exit.actor} died with reason: [#{exit.reason}]"
-      #       end
+      f.when(Actor::DeadActorError) do |exit|
+        puts "#{exit.actor} died with reason: [#{exit.reason}]"
+      end
     end
   end
 end

@@ -59,13 +59,28 @@ commit e86c74aed added functionality for parameters in your path. These are simp
 	
 The params are always going to be stored in `env`, naturally.
 
+You can also return other codes and custom headers by returning an array with the signature:
+	[code, headers, response]
+
 ## benchmarking ##
 
-	$ time curl localhost:6767/
-	Hello World
-	real	0m0.014s
-	user	0m0.007s
-	sys		0m0.004s
+	$ siege -d 1 -c 150 -t 10s localhost:6767/
+	** SIEGE 2.70
+	** Preparing 150 concurrent users for battle.
+	The server is now under siege...
+	Lifting the server siege...      done.
+	Transactions:		        5029 hits
+	Availability:		      100.00 %
+	Elapsed time:		        9.06 secs
+	Data transferred:	        0.05 MB
+	Response time:		        0.26 secs
+	Transaction rate:	      555.08 trans/sec
+	Throughput:		        0.01 MB/sec
+	Concurrency:		      146.56
+	Successful transactions:        5029
+	Failed transactions:	           0
+	Longest transaction:	        0.67
+	Shortest transaction:	        0.02
 
 ## License ##
 GPLv3

@@ -41,7 +41,8 @@ class Connection
     header = "%s %d:%s" % [uuid, conn_id.join(' ').length, conn_id.join(' ')]
     string =  header + ', ' + msg 
     #puts "\t\treplying to #{conn_id} with: ", string
-    @response_sock.send_string string, ZMQ::NOBLOCK
+    rc = @response_sock.send_string string, ZMQ::NOBLOCK
+    puts "errno [#{ZMQ::Util.errno}] with description [#{ZMQ::Util.error_string}]" unless ZMQ::Util.resultcode_ok?(rc)
   end
   
   # reply to an env with `message` string

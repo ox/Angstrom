@@ -1,4 +1,4 @@
-Gem::Specification.new 'armstrong', '0.4.0' do |s|
+Gem::Specification.new 'armstrong', '0.4.1' do |s|
   s.description       = "Armstrong is an Mongrel2 fronted, actor-based web development framework similar in style to sinatra. With natively-threaded interpreters (Rubinius2), Armstrong provides true concurrency and high stability, by design."
   s.summary           = "Highly concurrent, sinatra-like framework"
   s.author            = "Artem Titoulenko"
