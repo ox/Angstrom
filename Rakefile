@@ -18,9 +18,8 @@ namespace :g do
   desc "Push gem"
   task :p do
     Rake::Task["g:b"].invoke
-    gem_file = `ls *.gem`.to_a.first
+    gem_file = `ls *.gem`.to_a.last.chomp
     puts "pushing #{gem_file}"
-    gets
-    `gem push #{gem_file}`
+    puts `gem push #{gem_file}`
   end
 end
