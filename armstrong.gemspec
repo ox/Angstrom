@@ -1,4 +1,7 @@
-Gem::Specification.new 'armstrong', '0.4.1' do |s|
+$LOAD_PATH.unshift File.expand_path('../lib', __FILE__)
+require 'armstrong/version'
+
+Gem::Specification.new 'armstrong', Aleph::VERSION do |s|
   s.description       = "Armstrong is an Mongrel2 fronted, actor-based web development framework similar in style to sinatra. With natively-threaded interpreters (Rubinius2), Armstrong provides true concurrency and high stability, by design."
   s.summary           = "Highly concurrent, sinatra-like framework"
   s.author            = "Artem Titoulenko"
