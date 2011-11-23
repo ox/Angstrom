@@ -1,6 +1,7 @@
 require 'ffi'
 require 'ffi-rzmq'
 require 'json'
+require 'cgi'
 
 class Connection
   attr_reader :app_id, :sub_addr, :pub_addr, :request_sock, :response_sock, :context
@@ -81,7 +82,18 @@ class Connection
     env[:body], _ = parse_netstring(head_rest)
 
     env[:headers] = JSON.parse(env[:headers])
+    if(env[:headers]["METHOD"] == "POST")
+      env[:post] = parse_params(env)
+    end
+    
     return env
+  end
+  
+  def parse_params(env)
+    r = {}
+    m = env[:body].scan(/(\w+)=(.*?)(?:&|$)/)
+    m.each { |k| r[CGI::unescape(k[0].to_s)] = CGI::unescape(k[1]) }
+    return r
   end
   
   # From WEBrick: thanks dawg.
