@@ -4,6 +4,11 @@ get "/" do
   "hello world"
 end
 
+post "/" do |env|
+  puts "post: ", env[:post].inspect
+  "hello POST world"
+end
+
 get "/:id" do |env|
   "id: #{env[:params]["id"]}"
 end
