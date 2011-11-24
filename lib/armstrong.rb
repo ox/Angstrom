@@ -106,7 +106,7 @@ module Aleph
       Aleph::Base.replier << ConnectionInformation.new(@conn) if done
       
       done = Lazy::demand(Lazy::Promise.new do |done|
-        Aleph::Base.request_handler << AddRoutes.new(@routes)
+        Aleph::Base.supervisor << AddRoutes.new(@routes)
         done = true
       end)
 
@@ -117,7 +117,7 @@ module Aleph
       # main loop
       loop do
         req = @conn.receive
-        Aleph::Base.request_handler << Request.new(req) if !req.nil?
+        Aleph::Base.supervisor << Request.new(req) if !req.nil?
       end
     end
   end

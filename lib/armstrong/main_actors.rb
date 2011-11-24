@@ -109,11 +109,32 @@ Aleph::Base.supervisor_proc = Proc.new do
   Aleph::Base.supervisor = Actor.current
   Actor.trap_exit = true
   
-  Actor.link(Actor[:replier])
-  Actor.link(Actor[:request_handler])
-
+  handler = []
+  handler_turn = 0
+  
+  Actor.spawn_link(&Aleph::Base.replier_proc)
+  
   loop do
     Actor.receive do |f|
+      f.when(AddRoutes) do |r|
+        handlers.each do |h|
+          h << r
+        end
+      end
+      
+      f.when(SpawnRequestHandlers) do |r|
+        handler << Actor.spawn_link(&Aleph::Base.request_handler_proc)
+      end
+      
+      f.when(Request) do |req|
+        handler[handler_turn] << req
+        if(handler_turn == handler.length)
+          handler_turn = 0
+        else
+          handler_turn += 1
+        end
+      end
+      
       f.when(Actor::DeadActorError) do |exit|
         "#{exit.actor.name} died with reason: #{exit.reason}"
         case exit.actor.name
