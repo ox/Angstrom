@@ -140,3 +140,22 @@ class Connection
     505 => 'HTTP Version Not Supported'
   }
 end
+
+# uuid generator. There's a pretty low chance of collision.
+def new_uuid
+  values = [
+    rand(0x0010000),
+    rand(0x0010000),
+    rand(0x0010000),
+    rand(0x0010000),
+    rand(0x0010000),  
+    rand(0x1000000),
+    rand(0x1000000),
+  ]
+  "%04x%04x-%04x-%04x-%04x%06x%06x" % values
+end
+
+uuid = new_uuid
+puts "replying as mongrel2 service #{uuid}"
+$armstrong_conn = Connection.new uuid
+$armstrong_conn.connect

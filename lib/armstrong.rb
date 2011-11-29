@@ -14,20 +14,6 @@ module Aleph
     class << self
       attr_accessor :conn, :routes
       
-      # uuid generator. There's a pretty low chance of collision.
-      def new_uuid
-        values = [
-          rand(0x0010000),
-          rand(0x0010000),
-          rand(0x0010000),
-          rand(0x0010000),
-          rand(0x0010000),  
-          rand(0x1000000),
-          rand(0x1000000),
-        ]
-        "%04x%04x-%04x-%04x-%04x%06x%06x" % values
-      end
-      
       def get(path, &block) route "GET", path, &block end
       def put(path, &block)  route "PUT",  path, &block end
       def post(path, &block) route "POST", path, &block end
@@ -86,37 +72,27 @@ module Aleph
     # that waits for an incoming message, parses it, and sends it off to be
     # operated on by the request handler. Boom.
     def self.run!
-      uuid = new_uuid
-      puts "starting Armstrong as mongrel2 service #{uuid}"
-      @conn = Connection.new uuid
-      @conn.connect
-      
       #ensure that all actors are launched. Yea.
       done = Lazy::demand(Lazy::promise do |done|
-        Actor.spawn(&Aleph::Base.replier_proc)
-        done = Lazy::demand(Lazy::promise do |done|
-          Actor.spawn(&Aleph::Base.request_handler_proc)
-          done = Lazy::demand(Lazy::promise do |done|
-            Actor.spawn(&Aleph::Base.supervisor_proc)
-            done = true
-          end)
-        end)
-      end)
-      
-      Aleph::Base.replier << ConnectionInformation.new(@conn) if done
-      
-      done = Lazy::demand(Lazy::Promise.new do |done|
-        Aleph::Base.supervisor << AddRoutes.new(@routes)
+        Actor.spawn(&Aleph::Base.supervisor_proc)
         done = true
       end)
 
-      if Aleph::Base.supervisor && Aleph::Base.request_handler && Aleph::Base.replier && done
+      if done
+        done2 = Lazy::demand(Lazy::Promise.new do |done2|
+          Actor[:supervisor] << SpawnRequestHandlers.new(4)
+          Actor[:supervisor] << AddRoutes.new(@routes)
+          done2 = true
+        end)
+      end
+
+      if Aleph::Base.supervisor && Aleph::Base.replier && done2
         puts "","="*56,"Armstrong has launched on #{Time.now}","="*56, ""
       end
       
       # main loop
       loop do
-        req = @conn.receive
+        req = $armstrong_conn.receive
         Aleph::Base.supervisor << Request.new(req) if !req.nil?
       end
     end
