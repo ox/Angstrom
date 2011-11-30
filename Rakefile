@@ -10,7 +10,7 @@ end
 
 desc "Build gem"
 task :gb do
-  `gem build armstrong.gemspec`
+  `gem build angstrom.gemspec`
 end
 
 desc "Push gem"
