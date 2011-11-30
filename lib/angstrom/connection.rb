@@ -91,8 +91,7 @@ class Connection
   
   def parse_params(env)
     r = {}
-    m = env[:body].scan(/(\w+)=(.*?)(?:&|$)/)
-    m.each { |k| r[CGI::unescape(k[0].to_s)] = CGI::unescape(k[1]) }
+    env[:body].split('&').map{|x| x.scan(/(.*?)=(.*?)$/)}.each_slice(2) { |k| r[CGI::unescape(k[0].to_s)] = CGI::unescape(k[1]) }
     return r
   end
   
@@ -140,3 +139,4 @@ class Connection
     505 => 'HTTP Version Not Supported'
   }
 end
+

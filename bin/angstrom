@@ -1,0 +1,108 @@
+#!/usr/bin/env ruby
+
+require 'fileutils'
+include FileUtils
+
+# this is a cli tool to make getting running with angstrom easier.
+def inform
+  puts """
+    Angstrom is an asynchronous ruby web framework that's fronted by mongrel2
+    and makes use of Actors in order to handle requests. It is preferred to use
+    rubinius2.0.0dev in order to take advantage of true concurrency in Ruby.
+    
+    usage: angstrom <command>
+    
+    commands:
+      create <name> [port]      Creates an angstrom app with a sample 
+                                mongrel2.conf and config.sqlite running on
+                                [port] or the default 6767.
+                                
+      start [host] [db.sqlite]  Starts a mongrel2 server in this directory
+                                and then runs the app called by the current 
+                                directorys name. This is equivalent to:
+                                  $m2sh start -host localhost -db config.sqlite >> /dev/null &
+                                  $ruby app.rb
+                                  
+      stop [host]               Kills the default running mongrel2 
+                                server or [host]. This is like:
+                                  $m2sh stop -host localhost
+                                  
+    short commands:
+      c = create
+      s = start
+      t = stop
+  """
+end
+
+mongrel2_conf = """
+angstrom_handler = Handler(
+    send_spec='tcp://127.0.0.1:9999',
+    send_ident='34f9ceee-cd52-4b7f-b197-88bf2f0ec378',
+    recv_spec='tcp://127.0.0.1:9998', 
+    recv_ident='')
+
+media_dir = Dir(
+    base='media/',
+    index_file='index.html',
+    default_ctype='text/plain')
+
+angstrom_host = Host(
+    name=\"localhost\", 
+    routes={
+        '/media/': media_dir,
+        '/': angstrom_handler})
+
+angstrom_serv = Server(
+    uuid=\"%s\",
+    access_log=\"/log/mongrel2.access.log\",
+    error_log=\"/log/mongrel2.error.log\",
+    chroot=\"./\",
+    default_host=\"localhost\",
+    name=\"angstrom test\",
+    pid_file=\"/run/mongrel2.pid\",
+    port=%i,
+    hosts = [angstrom_host]
+)
+
+settings = {\"zeromq.threads\": 2, \"limits.min_ping\": 15, \"limits.kill_limit\": 2}
+
+servers = [angstrom_serv]
+"""
+
+inform if ARGV.empty?
+
+case ARGV[0]
+when 'create', 'c'
+  inform if ARGV[1].nil?
+  port = (ARGV[2].nil? ? 6767 : ARGV[2])
+  mkdir ARGV[1]
+  cd ARGV[1]
+  %w[log run tmp].map(&method(:mkdir))
+  File.open("mongrel2.conf", 'w') {|file| file.puts(mongrel2_conf % [`m2sh uuid`.chomp, port]) }
+  puts "loading in the mongrel2.conf config"
+  puts `m2sh load -config mongrel2.conf -db config.sqlite`
+  File.open("#{ARGV[1]}.rb", 'w') {|file| file.puts "require 'rubygems'\nrequire 'angstrom'\n\n"}
+  puts "Created app #{ARGV[1]} that will run on port #{port}"
+  
+when 'start', 's'
+  host = (ARGV[1].nil? ? 'localhost' : ARGV[1])
+  db = (ARGV[2].nil? ? 'config.sqlite' : ARGV[2])
+  
+  output = `m2sh start -host #{host} -config #{db} > /dev/null &`
+  if output.match /Aborting/
+    puts "Error starting up mongrel2.\n\nTrace:\n#{output}"
+    break
+  end
+  puts "Started #{host} using the #{db} db" 
+  
+  file = Dir.pwd.split('/').last
+  puts "now running #{file}.rb"
+  puts `ruby #{file}.rb`
+  
+when 'stop', 't'
+  host = (ARGV[1].nil? ? 'localhost' : ARGV[1])
+  puts `m2sh stop -host #{host}`
+  puts "Stopped #{host}, I think"
+else
+  inform
+end

@@ -5,28 +5,14 @@ require 'lazy'
 libdir = File.dirname(__FILE__)
 $LOAD_PATH.unshift(libdir) unless $LOAD_PATH.include?(libdir)
 
-require "armstrong/connection"
-require 'armstrong/data_structures'
-require 'armstrong/main_actors'
+require "angstrom/connection"
+require 'angstrom/data_structures'
+require 'angstrom/main_actors'
   
 module Aleph
   class Base
     class << self
       attr_accessor :conn, :routes
-      
-      # uuid generator. There's a pretty low chance of collision.
-      def new_uuid
-        values = [
-          rand(0x0010000),
-          rand(0x0010000),
-          rand(0x0010000),
-          rand(0x0010000),
-          rand(0x0010000),  
-          rand(0x1000000),
-          rand(0x1000000),
-        ]
-        "%04x%04x-%04x-%04x-%04x%06x%06x" % values
-      end
       
       def get(path, &block) route "GET", path, &block end
       def put(path, &block)  route "PUT",  path, &block end
@@ -75,7 +61,7 @@ module Aleph
     end
   end
   
-  class Armstrong < Base
+  class Angstrom < Base
     
     # the kicker. It all gets launched from here.
     # this function makes a new connection object to handle the communication,
@@ -86,45 +72,35 @@ module Aleph
     # that waits for an incoming message, parses it, and sends it off to be
     # operated on by the request handler. Boom.
     def self.run!
-      uuid = new_uuid
-      puts "starting Armstrong as mongrel2 service #{uuid}"
-      @conn = Connection.new uuid
-      @conn.connect
-      
       #ensure that all actors are launched. Yea.
       done = Lazy::demand(Lazy::promise do |done|
-        Actor.spawn(&Aleph::Base.replier_proc)
-        done = Lazy::demand(Lazy::promise do |done|
-          Actor.spawn(&Aleph::Base.request_handler_proc)
-          done = Lazy::demand(Lazy::promise do |done|
-            Actor.spawn(&Aleph::Base.supervisor_proc)
-            done = true
-          end)
-        end)
-      end)
-      
-      Aleph::Base.replier << ConnectionInformation.new(@conn) if done
-      
-      done = Lazy::demand(Lazy::Promise.new do |done|
-        Aleph::Base.request_handler << AddRoutes.new(@routes)
+        Actor.spawn(&Aleph::Base.supervisor_proc)
         done = true
       end)
 
-      if Aleph::Base.supervisor && Aleph::Base.request_handler && Aleph::Base.replier && done
-        puts "","="*56,"Armstrong has launched on #{Time.now}","="*56, ""
+      if done
+        done2 = Lazy::demand(Lazy::Promise.new do |done2|
+          Actor[:supervisor] << SpawnRequestHandlers.new(4)
+          Actor[:supervisor] << SpawnReceivers.new(1)
+          Actor[:supervisor] << AddRoutes.new(@routes)
+          done2 = true
+        end)
+      end
+
+      if Aleph::Base.supervisor && Aleph::Base.replier && done2
+        puts "","="*56,"Angstrom has launched on #{Time.now}","="*56, ""
       end
       
       # main loop
       loop do
-        req = @conn.receive
-        Aleph::Base.request_handler << Request.new(req) if !req.nil?
+        gets
       end
     end
   end
   
   # thank you sinatra!
   # Sinatra delegation mixin. Mixing this module into an object causes all
-  # methods to be delegated to the Aleph::Armstrong class. Used primarily
+  # methods to be delegated to the Aleph::Angstrom class. Used primarily
   # at the top-level.
   module Delegator
     def self.delegate(*methods)
@@ -143,11 +119,11 @@ module Aleph
       attr_accessor :target
     end
 
-    self.target = Armstrong
+    self.target = Angstrom
   end
   
   # Sinatras secret sauce.
-  at_exit { Armstrong.run! }
+  at_exit { Angstrom.run! }
 end
 
 include Aleph::Delegator
