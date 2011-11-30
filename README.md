@@ -1,4 +1,4 @@
-# Armstrong #
+# Angstrom #
 An evented, fiber-based server for Ruby. This project is heavily based on [Brubeck](http://brubeck.io). The goal was to make it really easy to make an evented server that acted quick and scaled infinitely. This is accomplished by using [Mongrel2](http://mongrel2.org), [ZeroMQ](http://zeromq.org) and [Rubinius](rubini.us). Rubinius has the actor gem included already so it makes it really convenient to just use rubinius. Also, the 2.0.0dev branch has super nice thread handling, allowing for true Ruby concurrency that MRI just can't offer with its GIL.
 
 ## Mongrel2 and ZeroMQ ##
@@ -17,9 +17,9 @@ Go grab the zip from [zeromq/zeromq2-1](https://github.com/zeromq/zeromq2-1), un
 	
 	./autogen.sh; ./configure; make; sudo make install
 	
-#### Armstrong as a gem ####
+#### Angstrom as a gem ####
 
-	gem install armstrong
+	gem install angstrom
 
 #### ZMQ and other gems ####
 	gem install ffi-rzmq
@@ -37,7 +37,7 @@ There's a sample `mongrel2.conf` and `config.sqlite` in the `demo` folder, feel 
 
 ## minimal example ##
 
-	require './lib/armstrong'
+	require './lib/angstrom'
 	
 	get "/" do
 		"hello world"
@@ -45,13 +45,13 @@ There's a sample `mongrel2.conf` and `config.sqlite` in the `demo` folder, feel 
 
 Just like in Sinatra, we state the verb we want to use, the path, and give it a block with the relevant code to execute. So far only 'GET' requests are supported but more will come out in later builds. 
 
-Now you should run `ruby armstrong_test.rb` and then visit [localhost:6767](http://localhost:6767/) and relish in the 'Hello World'.
+Now you should run `ruby angstrom_test.rb` and then visit [localhost:6767](http://localhost:6767/) and relish in the 'Hello World'.
 
 ## more functionality ##
 
-commit e86c74aed added functionality for parameters in your path. These are simply demonstrated in the `demo/armstrong_test.rb` file. For instance, you can extract the id of a certain part of your path like so:
+commit e86c74aed added functionality for parameters in your path. These are simply demonstrated in the `demo/angstrom_test.rb` file. For instance, you can extract the id of a certain part of your path like so:
 
-	require 'armstrong'
+	require 'angstrom'
 	
 	get "/:id" do |env|
 		"id: #{env[:params]["id"]}"
