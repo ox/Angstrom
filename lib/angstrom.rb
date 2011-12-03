@@ -12,7 +12,7 @@ require 'angstrom/main_actors'
 module Aleph
   class Base
     class << self
-      attr_accessor :conn, :routes
+      attr_accessor :options, :routes
       
       def get(path, &block) route "GET", path, &block end
       def put(path, &block)  route "PUT",  path, &block end
@@ -20,6 +20,11 @@ module Aleph
       def head(path, &block) route "HEAD", path, &block end
       def delete(path, &block) route "DELETE", path, &block end
       def patch(path, &block) route "PATCH", path, &block end
+      
+      def set(option, value)
+        @options ||= {}
+        @options[option] = value
+      end
       
       def route(verb, path, &block)
         @routes ||= {}
@@ -62,7 +67,6 @@ module Aleph
   end
   
   class Angstrom < Base
-    
     # the kicker. It all gets launched from here.
     # this function makes a new connection object to handle the communication,
     # promises to start the replier, request handler, and their supervisor,
@@ -72,22 +76,25 @@ module Aleph
     # that waits for an incoming message, parses it, and sends it off to be
     # operated on by the request handler. Boom.
     def self.run!
+      set("receivers", 2) if !@options["receivers"]
+      set("request_handlers", 14) if !@options["request_handlers"]
+
       #ensure that all actors are launched. Yea.
       done = Lazy::demand(Lazy::promise do |done|
         Actor.spawn(&Aleph::Base.supervisor_proc)
         done = true
       end)
-
+      
       if done
         done2 = Lazy::demand(Lazy::Promise.new do |done2|
-          Actor[:supervisor] << SpawnRequestHandlers.new(4)
-          Actor[:supervisor] << SpawnReceivers.new(1)
+          Actor[:supervisor] << SpawnRequestHandlers.new(options["request_handlers"])
+          Actor[:supervisor] << SpawnReceivers.new(options["receivers"])
           Actor[:supervisor] << AddRoutes.new(@routes)
           done2 = true
         end)
       end
-
-      if Aleph::Base.supervisor && Aleph::Base.replier && done2
+      
+      if Aleph::Base.supervisor && done2
         puts "","="*56,"Angstrom has launched on #{Time.now}","="*56, ""
       end
       
@@ -113,7 +120,7 @@ module Aleph
       end
     end
 
-    delegate :get, :post, :put, :patch, :delete, :head
+    delegate :get, :post, :put, :patch, :delete, :head, :set
 
     class << self
       attr_accessor :target
@@ -127,4 +134,3 @@ module Aleph
 end
 
 include Aleph::Delegator
-
