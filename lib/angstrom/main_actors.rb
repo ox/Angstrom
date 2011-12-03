@@ -1,7 +1,7 @@
 module Aleph
   class Base
     class << self
-      attr_accessor :replier, :supervisor
+      attr_accessor :supervisor
       attr_accessor :message_receiver_proc, :request_handler_proc, :supervisor_proc, :container_proc
     end
   end
@@ -52,34 +52,41 @@ end
 # the request instead of making the user manually catch messages and send 
 # them out to the replier. 
 Aleph::Base.container_proc = Proc.new do
+  @name = "{container}"
   data = Actor.receive
   env, proccess = data.env, data.proccess
   response = proccess.call(env)
-  puts "[container] using response: ", response
+  
   if response.is_a? Array
     #just like Rack: env, code, headers, body. HINT HINT ( can't work because it's all async )
     env[:conn].reply_http(env, response[1], response[2], response[0])
   else
-    puts "[container] sending http_reply"
-    env[:conn].reply_http(env, response, 200, {"Content-Type", "text/html;charset=utf-8", "Connection", "keep-alive", "Server", "Angstrom", "X-Frame-Options", "sameorigin", "X-XSS_Protection", "1; mode=block"})
+    #puts "[container] sending http_reply"
+    env[:conn].reply_http(env, response, 200, {"Content-Type" => "text/html;charset=utf-8", "Connection" => "keep-alive", "Server" => "Angstrom", "X-Frame-Options" => "sameorigin", "X-XSS_Protection" => "1; mode=block"})
   end
 end
 
 Aleph::Base.message_receiver_proc = Proc.new do
   @name = "message_receiver"
+  @num = 0
   puts "started (#{@name})"
 
   uuid = new_uuid
-  conn = Connection.new uuid
-  conn.connect
+  @conn = Connection.new(uuid)
+  @conn.connect
   puts "replying as mongrel2 service #{uuid}"
-  
+
+  Actor.receive do |f|
+    f.when(Num) do |n|
+      @num = n.index
+    end
+  end
+    
   loop do
-    puts "waiting..."
-    env = conn.receive
-    env[:conn] = conn
-    puts "[message_receiver] got request, req = #{!req.nil?}"
-    Actor[:supervisor] << Request.new(env) if !req.nil?
+    env = @conn.receive
+    env[:conn] = @conn
+    #puts "[message_receiver:#{@num}] got message"
+    Actor[:supervisor] << Request.new(env) if !env.nil?
   end
 end
 
@@ -107,7 +114,7 @@ Aleph::Base.request_handler_proc = Proc.new do
         verb = r.env[:headers]["METHOD"]
         routes[verb].each do |route|
           if route.route[0].match(r.env[:path])
-            puts "[request_handler:#{@num}] route matched! Making container..."
+            #puts "[request_handler:#{@num}] route matched! Making container..."
             r.env[:params] = process_route(r.env[:path], route.route[0], route.route[1])
             Actor.spawn(&Aleph::Base.container_proc) << MessageAndProc.new(r.env, route.method)
             failure = false
@@ -118,7 +125,7 @@ Aleph::Base.request_handler_proc = Proc.new do
       end
 
       f.when(Actor::DeadActorError) do |exit|
-        puts "[request_handler] #{exit.actor} died with reason: [#{exit.reason}]"
+        puts "[request_handler] #{exit.actor.name} died with reason: [#{exit.reason}]"
       end
     end
   end
@@ -138,23 +145,22 @@ Aleph::Base.supervisor_proc = Proc.new do
       
   loop do
     Actor.receive do |f|
-      
       f.when(AddRoutes) do |r|
-        puts "Adding routes"
+        #puts "Adding routes"
         handlers.each { |h| h << r }
       end
       
       f.when(SpawnRequestHandlers) do |r|
         r.num.times do
-          puts "spawning a request_handler in handlers[#{handlers.size}]"
+          #puts "spawning a request_handler in handlers[#{handlers.size}]"
           handlers << (Actor.spawn_link(&Aleph::Base.request_handler_proc) << Num.new(handlers.size))
         end
       end
       
       f.when(Request) do |req|
-        puts "[supervisor] routing request"
+        #puts "[supervisor] routing request to handlers[#{handler_turn}]"
         handlers[handler_turn] << req
-        if(handler_turn == handlers.size)
+        if(handler_turn == handlers.size - 1)
           handler_turn = 0
         else
           handler_turn += 1
@@ -163,8 +169,8 @@ Aleph::Base.supervisor_proc = Proc.new do
       
       f.when(SpawnReceivers) do |r|
         r.num.times do
-          puts "spawning a receiver in receivers[#{receivers.size}]"
-          receivers << Actor.spawn_link(&Aleph::Base.message_receiver_proc)
+          #puts "spawning a receiver in receivers[#{receivers.size}]"
+          receivers << (Actor.spawn_link(&Aleph::Base.message_receiver_proc) << Num.new(receivers.size))
         end
       end
       

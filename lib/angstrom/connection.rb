@@ -15,11 +15,11 @@ class Connection
   end
   
   def connect
-    @context = ZMQ::Context.new 1
-    @request_sock = @context.socket ZMQ::PULL
+    @context = ZMQ::Context.new 2
+    @request_sock = @context.socket(ZMQ::PULL)
     @request_sock.connect @sub_addr
     
-    @response_sock = @context.socket ZMQ::PUB
+    @response_sock = @context.socket(ZMQ::PUB)
     @response_sock.setsockopt ZMQ::IDENTITY, @app_id
     @response_sock.connect @pub_addr
   end
@@ -75,7 +75,7 @@ class Connection
     if msg.nil? || msg.empty?
       return nil
     end
-    
+        
     env = {}
     env[:sender], env[:conn_id], env[:path], rest = msg.split(' ', 4)
     env[:headers], head_rest = parse_netstring(rest)

@@ -77,7 +77,7 @@ module Aleph
         Actor.spawn(&Aleph::Base.supervisor_proc)
         done = true
       end)
-
+      
       if done
         done2 = Lazy::demand(Lazy::Promise.new do |done2|
           Actor[:supervisor] << SpawnRequestHandlers.new(4)
@@ -86,8 +86,8 @@ module Aleph
           done2 = true
         end)
       end
-
-      if Aleph::Base.supervisor && Aleph::Base.replier && done2
+      
+      if Aleph::Base.supervisor && done2
         puts "","="*56,"Angstrom has launched on #{Time.now}","="*56, ""
       end
       
@@ -127,4 +127,3 @@ module Aleph
 end
 
 include Aleph::Delegator
-
