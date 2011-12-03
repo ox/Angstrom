@@ -1,7 +1,7 @@
 module Aleph
   class Base
     class << self
-      attr_accessor :supervisor
+      attr_accessor :supervisor, :routes
       attr_accessor :message_receiver_proc, :request_handler_proc, :supervisor_proc, :container_proc
     end
   end
@@ -97,26 +97,21 @@ Aleph::Base.request_handler_proc = Proc.new do
   @num = 0
   puts "started (#{@name})"
   Actor.trap_exit = true
-  
-  routes = {}
+
   loop do
     Actor.receive do |f|
       f.when(Num) do |n|
         @num = n.index
       end
-      
-      f.when(AddRoutes) do |r|
-        routes = r.routes
-      end
 
       f.when(Request) do |r|
         failure = true
         verb = r.env[:headers]["METHOD"]
-        routes[verb].each do |route|
+        $routes[verb].each do |route|
           if route.route[0].match(r.env[:path])
             #puts "[request_handler:#{@num}] route matched! Making container..."
             r.env[:params] = process_route(r.env[:path], route.route[0], route.route[1])
-            Actor.spawn(&Aleph::Base.container_proc) << MessageAndProc.new(r.env, route.method)
+            Actor.spawn_link(&Aleph::Base.container_proc) << MessageAndProc.new(r.env, route.method)
             failure = false
             break
           end
@@ -125,7 +120,7 @@ Aleph::Base.request_handler_proc = Proc.new do
       end
 
       f.when(Actor::DeadActorError) do |exit|
-        puts "[request_handler] #{exit.actor.name} died with reason: [#{exit.reason}]"
+        puts "[request_handler] #{exit.actor} died with reason: [#{exit.reason}]"
       end
     end
   end
@@ -144,12 +139,7 @@ Aleph::Base.supervisor_proc = Proc.new do
   @receiver_turn = 0
       
   loop do
-    Actor.receive do |f|
-      f.when(AddRoutes) do |r|
-        #puts "Adding routes"
-        @handlers.each { |h| h << r }
-      end
-      
+    Actor.receive do |f|      
       f.when(SpawnRequestHandlers) do |r|
         puts "[supervisor] adding #{r.num} handlers. #{@handlers.size + r.num} will be available"
         r.num.times do
@@ -190,13 +180,14 @@ Aleph::Base.supervisor_proc = Proc.new do
       
       f.when(Actor::DeadActorError) do |exit|
         "[supervisor] #{exit.actor} died with reason: [#{exit.reason}]"
-        case exit.actor.name
-        when "request_handler"
-          # lets replace that failed request_handler with a new one. NO DOWN TIME
-          handlers[exit.actor.num] = (Actor.spawn_link(&Aleph::Base.request_handler_proc) << Num.new(exit.actor.num))
-        when "message_receiver"
-          repliers[exit.actor.num] = (Actor.spawn_link(&Aleph::Base.message_receiver_proc) << Num.new(exit.actor.num))     
-        end
+        puts "!!!! \e[32m[supervisor]\e[0m death:", exit.inspect, exit.actor.inspect
+        # case exit.actor.name
+        # when "request_handler"
+        #   # lets replace that failed request_handler with a new one. NO DOWN TIME
+        #   handlers[exit.actor.num] = (Actor.spawn_link(&Aleph::Base.request_handler_proc) << Num.new(exit.actor.num))
+        # when "message_receiver"
+        #   repliers[exit.actor.num] = (Actor.spawn_link(&Aleph::Base.message_receiver_proc) << Num.new(exit.actor.num))     
+        # end
       end
     end
   end

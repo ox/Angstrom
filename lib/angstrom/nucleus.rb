@@ -22,7 +22,6 @@ module Aleph
       when "add"
         case what
         when "handlers"
-          puts 'ehre'
           Actor[:supervisor] << SpawnRequestHandlers.new(quantity)
         when "receivers"
           Actor[:supervisor] << SpawnReceivers.new(quantity)

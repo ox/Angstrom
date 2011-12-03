@@ -13,7 +13,7 @@ require 'angstrom/nucleus'
 module Aleph
   class Base
     class << self
-      attr_accessor :options, :routes
+      attr_accessor :options
       
       def get(path, &block) route "GET", path, &block end
       def put(path, &block)  route "PUT",  path, &block end
@@ -28,8 +28,8 @@ module Aleph
       end
       
       def route(verb, path, &block)
-        @routes ||= {}
-        (@routes[verb] ||= []) << AddRoute.new(compile(path), block)
+        $routes ||= {}
+        ($routes[verb] ||= []) << AddRoute.new(compile(path), block)
       end
       
       private
@@ -90,7 +90,6 @@ module Aleph
         done2 = Lazy::demand(Lazy::Promise.new do |done2|
           Actor[:supervisor] << SpawnRequestHandlers.new(options["request_handlers"])
           Actor[:supervisor] << SpawnReceivers.new(options["receivers"])
-          Actor[:supervisor] << AddRoutes.new(@routes)
           done2 = true
         end)
       end
