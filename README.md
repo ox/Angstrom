@@ -49,6 +49,8 @@ Now you should run `ruby angstrom_test.rb` and then visit [localhost:6767](http:
 
 ## more functionality ##
 
+#### Parameters ####
+
 commit e86c74aed added functionality for parameters in your path. These are simply demonstrated in the `demo/angstrom_test.rb` file. For instance, you can extract the id of a certain part of your path like so:
 
 	require 'angstrom'
@@ -61,6 +63,39 @@ The params are always going to be stored in `env`, naturally.
 
 You can also return other codes and custom headers by returning an array with the signature:
 	[code, headers, response]
+
+#### POST ####
+
+Recent versions of Angstrom (v0.5.2+) can now handle POST methods effectively. It's also really easy to use! For example: 
+
+	require 'angstrom'
+
+	post "/" do |env|
+  		puts "post: ", env[:post].inspect
+  		"hello POST world"
+	end
+
+all of the params passed in by POST will be available in `env[:post]`. In the case that multiple arguments with the same name are passed in, only the last one will be used. 
+
+POST only handles `key=value&another_key=another_value&etc …` kind of POST messages. So if you're getting in JSON, you'll need to parse it yourself.
+
+#### Settings/Scaling ####
+
+Versions 0.5.2+ can now set certain setting in Angstrom. As of 0.5.2 only `receivers` and `request_handlers` settings can be set.
+
+	require 'angstrom'
+
+	# these settings are only limited by your RAM and number of cores
+	set("request_handlers", 8)
+	set("receivers", 10) 
+	
+	get "/" do
+	  "hello world"
+	end
+
+`request_handlers` are actors which will receive a path and request body and find the appropriate method to give them to. More `request_handlers` will result in more actors to handle your messages.
+
+`receivers` are the actors which receive messages from Mongrel2. Once Mongrel2 starts sending out more messages, you might want to crank this number up in order to fetch more messages. As one receiver packs and sends off a message, another can pick up an incoming request and start working on it. This lets you churn through requests much faster than a single-threaded, blocking app ever will.
 
 ## benchmarking ##
 
