@@ -22,7 +22,7 @@ Go grab the zip from [zeromq/zeromq2-1](https://github.com/zeromq/zeromq2-1), un
 	gem install angstrom
 
 #### ZMQ and other gems ####
-	gem install ffi-rzmq
+	gem install ffi-rzmq -v=0.9.0
 	gem install lazy
 
 it should also install `ffi` and `ffi-rzmq` which are to dynamically load libs and call functions from them. Interesting stuff, but out of the scope of this measly README.
