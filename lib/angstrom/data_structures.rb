@@ -7,4 +7,6 @@ MessageAndProc = Struct.new :env, :proccess
 
 SpawnRequestHandlers = Struct.new :num
 SpawnReceivers = Struct.new :num
+RemoveRequestHandlers = Struct.new :num
+RemoveReceivers = Struct.new :num
 Num = Struct.new :index

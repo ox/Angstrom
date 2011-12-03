@@ -82,7 +82,7 @@ Aleph::Base.message_receiver_proc = Proc.new do
     end
   end
     
-  loop do
+  while !conn.nil?
     env = conn.receive
     env[:conn] = conn
     #puts "[message_receiver:#{@num}] got message"
@@ -138,51 +138,65 @@ Aleph::Base.supervisor_proc = Proc.new do
   Actor.trap_exit = true
   puts "started (supervisor)"
   
-  handlers = []
-  receivers = []
-  handler_turn = 0
-  receiver_turn = 0
+  @handlers = []
+  @receivers = []
+  @handler_turn = 0
+  @receiver_turn = 0
       
   loop do
     Actor.receive do |f|
       f.when(AddRoutes) do |r|
         #puts "Adding routes"
-        handlers.each { |h| h << r }
+        @handlers.each { |h| h << r }
       end
       
       f.when(SpawnRequestHandlers) do |r|
+        puts "[supervisor] adding #{r.num} handlers. #{@handlers.size + r.num} will be available"
         r.num.times do
           #puts "spawning a request_handler in handlers[#{handlers.size}]"
-          handlers << (Actor.spawn_link(&Aleph::Base.request_handler_proc) << Num.new(handlers.size))
+          @handlers << (Actor.spawn_link(&Aleph::Base.request_handler_proc) << Num.new(@handlers.size))
         end
       end
       
       f.when(Request) do |req|
-        #puts "[supervisor] routing request to handlers[#{handler_turn}]"
-        handlers[handler_turn] << req
-        if(handler_turn == handlers.size - 1)
-          handler_turn = 0
+        puts "[supervisor] routing request to handlers[#{@handler_turn}]"
+        @handlers[@handler_turn] << req
+        if(@handler_turn == @handlers.size - 1)
+          @handler_turn = 0
         else
-          handler_turn += 1
+          @handler_turn += 1
         end
       end
       
       f.when(SpawnReceivers) do |r|
+        puts "[supervisor] adding #{r.num} receivers. #{@receivers.size + r.num} will be available"
         r.num.times do
           #puts "spawning a receiver in receivers[#{receivers.size}]"
-          receivers << (Actor.spawn_link(&Aleph::Base.message_receiver_proc) << Num.new(receivers.size))
+          @receivers << (Actor.spawn_link(&Aleph::Base.message_receiver_proc) << Num.new(@receivers.size))
         end
+      end
+
+      f.when(RemoveReceivers) do |r|
+        puts "[supervisor] removing #{r.num} receivers. #{@receivers.size-r.num} remaining"
+        @receivers = @receivers[0..@receivers.size-1-r.num]
+        @receiver_turn = 0
+      end
+
+      f.when(RemoveRequestHandlers) do |r|
+        puts "[supervisor] removing #{r.num} handlers. #{@handlers.size-r.num} remaining"
+        @handlers = @handlers[0..@receivers.size-1-r.num]
+        @handler_turn = 0
       end
       
       f.when(Actor::DeadActorError) do |exit|
         "[supervisor] #{exit.actor} died with reason: [#{exit.reason}]"
-        # case exit.actor.name
-        # when "request_handler"
-        #   # lets replace that failed request_handler with a new one. NO DOWN TIME
-        #   handlers[exit.actor.num] = (Actor.spawn_link(&Aleph::Base.request_handler_proc) << Num.new(exit.actor.num))
-        # when "message_receiver"
-        #   repliers[exit.actor.num] = (Actor.spawn_link(&Aleph::Base.message_receiver_proc) << Num.new(exit.actor.num))     
-        # end
+        case exit.actor.name
+        when "request_handler"
+          # lets replace that failed request_handler with a new one. NO DOWN TIME
+          handlers[exit.actor.num] = (Actor.spawn_link(&Aleph::Base.request_handler_proc) << Num.new(exit.actor.num))
+        when "message_receiver"
+          repliers[exit.actor.num] = (Actor.spawn_link(&Aleph::Base.message_receiver_proc) << Num.new(exit.actor.num))     
+        end
       end
     end
   end

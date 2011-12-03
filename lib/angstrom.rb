@@ -8,6 +8,7 @@ $LOAD_PATH.unshift(libdir) unless $LOAD_PATH.include?(libdir)
 require "angstrom/connection"
 require 'angstrom/data_structures'
 require 'angstrom/main_actors'
+require 'angstrom/nucleus'
   
 module Aleph
   class Base
@@ -100,7 +101,8 @@ module Aleph
       
       # main loop
       loop do
-        gets
+        print "> "
+        Aleph::Nucleus.bond(gets.chomp)
       end
     end
   end
