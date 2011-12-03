@@ -49,7 +49,7 @@ Now you should run `ruby angstrom_test.rb` and then visit [localhost:6767](http:
 
 ## more functionality ##
 
-#### Parameters ####
+### Parameters ###
 
 commit e86c74aed added functionality for parameters in your path. These are simply demonstrated in the `demo/angstrom_test.rb` file. For instance, you can extract the id of a certain part of your path like so:
 
@@ -64,7 +64,7 @@ The params are always going to be stored in `env`, naturally.
 You can also return other codes and custom headers by returning an array with the signature:
 	[code, headers, response]
 
-#### POST ####
+### POST ###
 
 Recent versions of Angstrom (v0.5.2+) can now handle POST methods effectively. It's also really easy to use! For example: 
 
@@ -79,7 +79,7 @@ all of the params passed in by POST will be available in `env[:post]`. In the ca
 
 POST only handles `key=value&another_key=another_value&etc …` kind of POST messages. So if you're getting in JSON, you'll need to parse it yourself.
 
-#### Settings/Scaling ####
+### Settings/Scaling ###
 
 Versions 0.5.2+ can now set certain setting in Angstrom. As of 0.5.2 only `receivers` and `request_handlers` settings can be set.
 
@@ -96,6 +96,17 @@ Versions 0.5.2+ can now set certain setting in Angstrom. As of 0.5.2 only `recei
 `request_handlers` are actors which will receive a path and request body and find the appropriate method to give them to. More `request_handlers` will result in more actors to handle your messages.
 
 `receivers` are the actors which receive messages from Mongrel2. Once Mongrel2 starts sending out more messages, you might want to crank this number up in order to fetch more messages. As one receiver packs and sends off a message, another can pick up an incoming request and start working on it. This lets you churn through requests much faster than a single-threaded, blocking app ever will.
+
+### Nucleus ###
+
+Nucleus is an interface to your web server. It allows you to scale your server up and down. So into your terminal you can type:
+
+	> add 1 receivers
+	> add 12 handlers
+	> remove 4 receivers
+	> remove 1 handlers
+
+and angstrom will fire up a receiver, 12 handlers, kill 4 receivers and kill 1 handler. It's pretty nifty and allows you to scale on the fly! Just type into your terminal.
 
 ## benchmarking ##
 

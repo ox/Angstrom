@@ -78,7 +78,7 @@ module Aleph
     # operated on by the request handler. Boom.
     def self.run!
       set("receivers", 2) if !@options["receivers"]
-      set("request_handlers", 14) if !@options["request_handlers"]
+      set("request_handlers", 4) if !@options["request_handlers"]
 
       #ensure that all actors are launched. Yea.
       done = Lazy::demand(Lazy::promise do |done|
