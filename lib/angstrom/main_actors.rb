@@ -72,8 +72,8 @@ Aleph::Base.message_receiver_proc = Proc.new do
   puts "started (#{@name})"
 
   uuid = new_uuid
-  @conn = Connection.new(uuid)
-  @conn.connect
+  conn = Connection.new(uuid)
+  conn.connect
   puts "replying as mongrel2 service #{uuid}"
 
   Actor.receive do |f|
@@ -83,8 +83,8 @@ Aleph::Base.message_receiver_proc = Proc.new do
   end
     
   loop do
-    env = @conn.receive
-    env[:conn] = @conn
+    env = conn.receive
+    env[:conn] = conn
     #puts "[message_receiver:#{@num}] got message"
     Actor[:supervisor] << Request.new(env) if !env.nil?
   end
