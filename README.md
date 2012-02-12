@@ -150,6 +150,3 @@ _These benchmarks were done using Rubinius as the Ruby interpreter. You will get
 	Failed transactions:	          34
 	Longest transaction:	        1.39
 	Shortest transaction:	        0.20
-
-## License ##
-GPLv3
